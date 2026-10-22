@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Argentina, MatrixRain, Photos, Pitch, RiverBadges, Sash, Synthwave, Wallpaper } from "./backgrounds";
+import { Argentina, MatrixRain, Photos, Pitch, RiverBadges, Synthwave, Wallpaper } from "./backgrounds";
 import { BigClock, C64Screen, CenterClock, Scoreboard, SmallClock, Terminal } from "./headers";
 
 // A theme is the whole look: a class on the page (colours, shapes and fonts live in styles.css,
@@ -15,7 +15,7 @@ export type Theme = {
   ready?: boolean; // can be picked; the others are listed as coming soon
 };
 
-const RIVER = ["Vamos River, vamos River", "El más grande sigue siendo River", "Los Borrachos del Tablón",
+export const RIVER = ["Vamos River, vamos River", "El más grande sigue siendo River", "Los Borrachos del Tablón",
   "Monumental, la casa del más grande", "Madrid, 9 de diciembre de 2018", "Siempre de River"];
 const ARG = ["Che, ¿unos mates?", "Hoy hay asado", "¡Vamos Argentina! ★★★", "Dale que va",
   "Empanadas de carne, cortadas a cuchillo", "Domingo, fútbol y fernet", "Mate amargo y a laburar"];
@@ -31,8 +31,9 @@ export const THEMES: Theme[] = [
   { id: "retro", name: "Retro", background: () => <Synthwave />, header: <BigClock />, swatch: "linear-gradient(135deg,#ff2e97,#ffe14d)" },
   {
     id: "river", name: "River", ready: true,
-    background: () => <><div className="bg river" /><Photos folders={["river", "hinchada"]} /><Sash /><RiverBadges /></>,
-    header: <BigClock phrases={RIVER} />, swatch: "linear-gradient(135deg,#fff 35%,#e30613 35%,#e30613 65%,#fff 65%)",
+    // Hidden for now: the sash (<Sash />) and the chants under the clock (phrases={RIVER}).
+    background: () => <><div className="bg river" /><Photos folders={["river", "hinchada"]} /><RiverBadges /></>,
+    header: <BigClock />, swatch: "linear-gradient(135deg,#fff 35%,#e30613 35%,#e30613 65%,#fff 65%)",
   },
   { id: "argentina", name: "Argentina", background: () => <Argentina />, header: <BigClock phrases={ARG} />, swatch: "linear-gradient(#74acdf 33%,#fff 33%,#fff 66%,#74acdf 66%)" },
   { id: "matrix", name: "Matrix", background: () => <MatrixRain />, header: <BigClock phrases={NERD} />, swatch: "#00ff41" },
