@@ -41,6 +41,8 @@ export function Photos({ folders, every = 12000, fallback }: { folders: string[]
     if (solo) folders = [solo];
     // Every photo from every folder, shuffled (a new order each time the home screen starts).
     const out = folders.flatMap((f) => bridge.photos(f).map((n) => `${f}/${n}`));
+    // Browser preview: ?orden=1 shows them in name order, to go through them one by one.
+    if (!onTV && new URLSearchParams(location.search).get("orden")) return out.sort();
     for (let i = out.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [out[i], out[j]] = [out[j], out[i]];

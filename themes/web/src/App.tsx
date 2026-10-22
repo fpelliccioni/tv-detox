@@ -190,6 +190,8 @@ export default function Home() {
     else if (name === "back") {
       if (moving) { setMoving(null); return; }
       if (menu) { if (menu.kind === "panel") menu.cancel?.(); close(); }
+      // Back with nothing open: straight to the photos-only view (Escape in the browser).
+      else setTimeout(() => setIdle(true), 0);
     } else if (name === "menu") {
       const k = (document.activeElement as HTMLElement | null)?.dataset.key;
       if (k && row.includes(k) && !menu) editMenu(k);
