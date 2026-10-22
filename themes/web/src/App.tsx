@@ -300,7 +300,7 @@ export default function Home() {
 
   return (
     <HomeContext.Provider value={home}>
-      <div className={`stage theme-${theme.id} ${idle && !menu && !moving ? "idle" : ""}`} style={{ transform: `scale(${scale})`, ["--per-row" as string]: perRow }}>
+      <div className={`stage theme-${theme.id} ${idle && !menu && !moving ? "idle" : ""}`} style={{ transform: `translate(${(window.innerWidth - 1920 * scale) / 2}px, ${(window.innerHeight - 1080 * scale) / 2}px) scale(${scale})`, ["--per-row" as string]: perRow }}>
         <div className="backdrop" key={theme.id + (theme.id === "clasico" ? wallpaper : "")}>{theme.background(wallpaper)}</div>
         <div className="page">
           <div className="header" key={theme.id}>{theme.header}</div>
