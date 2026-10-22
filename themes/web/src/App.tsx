@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { App as AppInfo, bridge, iconUrl, Input, Net, onEvent } from "./bridge";
+import { App as AppInfo, bridge, iconUrl, Input, Net, onEvent, onTV } from "./bridge";
 import { Config, DEFAULT_APPS, load, merge, save } from "./config";
 import { t } from "./i18n";
 import { Bluetooth, Gear, Hdmi, Picture, Play, Plus, Sound, Wifi } from "./icons";
@@ -122,7 +122,10 @@ export default function Home() {
   useEffect(() => {
     let timer = 0;
     const arm = () => { clearTimeout(timer); timer = window.setTimeout(() => setIdle(true), IDLE_MS); };
+    // The preview's review keys ([ ] d e) work on the photos and leave the screen as it is.
+    const DEBUG = ["[", "]", "d", "e"];
     const wake = (e: Event) => {
+      if (!onTV && e instanceof KeyboardEvent && DEBUG.includes(e.key) && !(e.target instanceof HTMLInputElement)) return;
       if (idleRef.current) {
         e.preventDefault();
         e.stopImmediatePropagation();
