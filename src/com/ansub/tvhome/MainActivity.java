@@ -75,7 +75,7 @@ public class MainActivity extends Activity {
     private static final String ADD = "add";
     private static final String[] EDIT_ITEMS = {"Move", "Replace", "Remove from home", "Uninstall"};
     private static final String[] EDIT_ITEMS_SYSTEM = {"Move", "Replace", "Remove from home", "App info"};
-    private static final int PER_ROW = 6, MAX_INPUTS = 4;
+    private static final int MAX_INPUTS = 4;
 
     // Settings shortcuts: name, label, icon. Tile keys are QUICK + name.
     private static final String QUICK = "quick:";
@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
     private static final String TCL_SHOW_WINDOW = "com.tcl.settings.SHOW_WINDOW";
 
     // Layout is designed at 1920x1080 and scaled to the TV's real UI size by px().
-    private static final int MARGIN = 96, GAP = 36, RADIUS = 22;
+    private static final int MARGIN = 96, GAP = 36;
     private static final int ROW1_TOP = 604, ROW_STEP = 224;
     private static final int GRID_MIN_TOP = 400; // more rows push the grid up, but not into the clock
     private static final int ICON_TOP = 76, ICON_BUTTON = 72, ICON_SIZE = 40, ICON_GAP = 12; // level with the date
@@ -123,6 +123,13 @@ public class MainActivity extends Activity {
     private float scale = 1f;
 
     private static Typeface regular, semibold;
+    private Theme theme = Theme.ALL[0];
+    private View clockView;
+    private TextView phraseView;      // the theme's phrase under the clock, new each time Home is back
+    private FrameLayout page;         // the motion view (if the theme has one) behind the scroller
+    private final List<View> motionViews = new ArrayList<>();
+    // Each tile's accent outline (themes with an accent), put back after a move borrows the foreground.
+    private final java.util.Map<View, GradientDrawable> rings = new java.util.HashMap<>();
 
     private FrameLayout root; // the page, inside a vertical scroller
     private int tileW, tileH, gridTop; // app grid geometry, set by buildTiles
@@ -164,9 +171,11 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         saveConfig(getIntent());
-        loadFonts();
+        theme = Theme.ALL[Theme.indexOf(getSharedPreferences(PREFS, 0).getString("theme", null))];
+        regular = null; // static: may hold another theme's fonts from before a restart
+        loadFonts(theme);
         scale = getResources().getDisplayMetrics().widthPixels / 1920f;
-        showWallpaper(wallpaper());
+        showBackground();
 
         ScrollView scroller = new ScrollView(this);
         scroller.setFillViewport(true);
@@ -177,29 +186,18 @@ public class MainActivity extends Activity {
         root.setClipChildren(false);
         scroller.addView(root, new FrameLayout.LayoutParams(-1, -2));
 
-        LinearLayout clock = new LinearLayout(this);
-        clock.setOrientation(LinearLayout.VERTICAL);
         shownLocale = java.util.Locale.getDefault();
-        String day = Strings.datePattern();
-        TextClock date = clock(day, day, px(30), 0xA8FFFFFF, regular);
-        TextClock time = clock("h:mm", "H:mm", px(176), Color.WHITE, semibold);
-        time.setLetterSpacing(-0.028f);
-        time.setFontFeatureSettings("tnum");
-        time.setIncludeFontPadding(false);
-        // Wrap, not the default match_parent: the column must be as wide as the date, not just the time,
-        // or "0:00" to "9:59" (one digit less) cuts a long date off.
-        clock.addView(date, new LinearLayout.LayoutParams(-2, -2));
-        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-2, -2);
-        tp.topMargin = px(-20); // pull the big digits up under the date
-        clock.addView(time, tp);
-        root.addView(clock, at(px(MARGIN), px(92), -2, -2));
+        buildClock();
 
         moveHint = text(px(24), 0xA8FFFFFF, regular);
         moveHint.setText(Strings.t("Use the arrows to move it, then press OK"));
         moveHint.setVisibility(View.GONE);
         root.addView(moveHint, at(px(MARGIN), px(ROW1_TOP - 64), -2, -2));
 
-        setContentView(scroller);
+        page = new FrameLayout(this);
+        page.addView(scroller, new FrameLayout.LayoutParams(-1, -1));
+        setContentView(page);
+        applyMotion();
 
         IntentFilter f = new IntentFilter();
         f.addAction(Intent.ACTION_PACKAGE_ADDED);
@@ -229,6 +227,9 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         if (saveConfig(intent)) buildTiles();
+        // A theme set from adb (--es theme Cine) is saved by saveConfig and shown here.
+        String t = intent.getStringExtra("theme");
+        if (t != null) applyTheme(Theme.indexOf(t));
     }
 
     // Saves an app list passed with --es apps "..." and shortcuts passed with --es quick "...".
@@ -238,6 +239,8 @@ public class MainActivity extends Activity {
     private boolean saveConfig(Intent intent) {
         String apps = intent == null ? null : intent.getStringExtra("apps");
         String quick = intent == null ? null : intent.getStringExtra("quick");
+        String themeName = intent == null ? null : intent.getStringExtra("theme");
+        if (themeName != null) getSharedPreferences(PREFS, 0).edit().putString("theme", themeName).apply();
         if (apps == null && quick == null) return false;
         SharedPreferences prefs = getSharedPreferences(PREFS, 0);
         String stamp = intent.getStringExtra("stamp");
@@ -268,7 +271,7 @@ public class MainActivity extends Activity {
             // Top up with other TV apps people installed (or updated), skipping launchers and system tools.
             Intent q = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
             for (ResolveInfo ri : pm.queryIntentActivities(q, 0)) {
-                if (out.size() >= PER_ROW) break;
+                if (out.size() >= perRow()) break;
                 String p = ri.activityInfo.packageName;
                 int flags = ri.activityInfo.applicationInfo.flags;
                 boolean stockSystem = (flags & ApplicationInfo.FLAG_SYSTEM) != 0
@@ -289,6 +292,7 @@ public class MainActivity extends Activity {
             buildTiles();
         }
         refreshNetwork();
+        if (phraseView != null) phraseView.setText(theme.phrase());
         View f = getCurrentFocus();
         if (f == null && !tiles.isEmpty()) tiles.get(0).requestFocus();
     }
@@ -339,6 +343,189 @@ public class MainActivity extends Activity {
         getWindow().setBackgroundDrawable(background(WALLPAPERS[i]));
     }
 
+    // The theme's background: Classic shows the saved wallpaper, the others their own, plus any
+    // pattern or photo on top.
+    private void showBackground() {
+        Drawable base = background(theme.bg != null ? theme.bg : WALLPAPERS[wallpaper()]);
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        Drawable over = Theme.overlay(theme, getExternalFilesDir(null), dm.widthPixels, dm.heightPixels);
+        getWindow().setBackgroundDrawable(over == null ? base : new LayerDrawable(new Drawable[] {base, over}));
+    }
+
+    // Switches the whole look: fonts, background, clock and tiles. Menus pick it up when next opened.
+    private void applyTheme(int i) {
+        if (theme == Theme.ALL[i]) return;
+        theme = Theme.ALL[i];
+        regular = null;
+        loadFonts(theme);
+        showBackground();
+        applyMotion();
+        buildClock();
+        buildTiles();
+    }
+
+    // Falling code or a slideshow behind the page. A slideshow covers the window background, so the
+    // theme's pattern (River's sash) is drawn again on top of the photos.
+    private void applyMotion() {
+        for (View v : motionViews) page.removeView(v);
+        motionViews.clear();
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        View m = Motion.make(this, theme, dm.widthPixels, dm.heightPixels);
+        if (m == null) return;
+        page.addView(m, 0, new FrameLayout.LayoutParams(-1, -1));
+        motionViews.add(m);
+        Drawable over = theme.motion == Theme.SLIDESHOW ? Theme.overlay(theme, null, dm.widthPixels, dm.heightPixels) : null;
+        if (over != null) {
+            View v = new View(this);
+            v.setBackground(over);
+            page.addView(v, 1, new FrameLayout.LayoutParams(-1, -1));
+            motionViews.add(v);
+        }
+    }
+
+    // Moving through the list shows each theme for real behind the panel; OK keeps it, Back goes
+    // back to the one before.
+    private void showThemes() {
+        List<String> names = new ArrayList<>();
+        for (Theme t : Theme.ALL) names.add(t.name);
+        final int size = px(40);
+        panel(Strings.t("Theme"), names, pos -> {
+            Theme t = Theme.ALL[pos];
+            int[] c = t.bg != null ? t.bg : WALLPAPERS[wallpaper()];
+            GradientDrawable dot = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    new int[] {glow(c[3], c[0]), c[1], t.accent != 0 ? t.accent : glow(c[4], c[0])});
+            dot.setShape(GradientDrawable.OVAL);
+            dot.setStroke(Math.max(1, px(2)), 0x26FFFFFF);
+            dot.setSize(size, size);
+            return dot;
+        }, size, Theme.indexOf(theme.name), this::applyTheme, which -> {
+            getSharedPreferences(PREFS, 0).edit().putString("theme", Theme.ALL[which].name).apply();
+            applyTheme(which);
+        });
+    }
+
+    // The clock in the theme's style, replacing the one shown.
+    private void buildClock() {
+        if (clockView != null) root.removeView(clockView);
+        phraseView = null;
+        String day = Strings.datePattern();
+        int color = theme.clockColor;
+        if (theme.clock == Theme.CLOCK_TERMINAL) {
+            Terminal term = new Terminal(this, terminalHost, theme, px(26));
+            int w = getResources().getDisplayMetrics().widthPixels - 2 * px(MARGIN) - px(ICON_BUTTON) - px(24);
+            clockView = term.view;
+            root.addView(term.view, at(px(MARGIN), px(60), w, px(470)));
+            return;
+        }
+        if (theme.clock == Theme.CLOCK_C64) {
+            // The start-up screen, then READY. and the time with a blinking cursor.
+            LinearLayout col = new LinearLayout(this);
+            col.setOrientation(LinearLayout.VERTICAL);
+            String[] boot = {"    **** COMMODORE 64 BASIC V2 ****", " 64K RAM SYSTEM  38911 BASIC BYTES FREE", "", "READY."};
+            for (String l : boot) {
+                TextView t = text(px(34), color, semibold);
+                t.setSingleLine(true);
+                t.setText(l);
+                col.addView(t);
+            }
+            LinearLayout line = new LinearLayout(this);
+            line.setGravity(Gravity.BOTTOM);
+            TextClock time = clock("hh:mm", "HH:mm", px(96), color, semibold);
+            time.setIncludeFontPadding(false);
+            line.addView(time);
+            final View cursor = new View(this);
+            cursor.setBackgroundColor(color);
+            LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(px(46), px(78));
+            cp.leftMargin = px(16);
+            cp.bottomMargin = px(8);
+            line.addView(cursor, cp);
+            final Runnable[] blink = new Runnable[1];
+            blink[0] = () -> {
+                cursor.setAlpha(cursor.getAlpha() > 0.5f ? 0f : 1f);
+                if (cursor.isAttachedToWindow()) cursor.postDelayed(blink[0], 530);
+            };
+            cursor.post(blink[0]);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            lp.topMargin = px(12);
+            col.addView(line, lp);
+            clockView = col;
+            root.addView(col, at(px(MARGIN) + px(30), px(84), px(1300), -2)); // wide enough for the boot lines
+            return;
+        }
+        if (theme.clock == Theme.CLOCK_SMALL) {
+            // One line, top left: the time, then the date beside it.
+            LinearLayout line = new LinearLayout(this);
+            line.setGravity(Gravity.BOTTOM);
+            TextClock time = clock("h:mm", "H:mm", px(72), color, semibold);
+            time.setFontFeatureSettings("tnum");
+            time.setIncludeFontPadding(false);
+            line.addView(time);
+            if (theme.date) {
+                TextClock date = clock(day, day, px(30), 0xA8FFFFFF, regular);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+                lp.leftMargin = px(28);
+                lp.bottomMargin = px(8);
+                line.addView(date, lp);
+            }
+            clockView = line;
+            root.addView(line, at(px(MARGIN), px(72), -2, -2));
+            return;
+        }
+        if (theme.clock == Theme.CLOCK_CENTER) {
+            TextClock time = clock("h:mm", "H:mm", px(230), color, regular);
+            time.setLetterSpacing(-0.02f);
+            time.setFontFeatureSettings("tnum");
+            time.setIncludeFontPadding(false);
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL);
+            lp.topMargin = px(130);
+            clockView = time;
+            root.addView(time, lp);
+            return;
+        }
+        LinearLayout clock = new LinearLayout(this);
+        clock.setOrientation(LinearLayout.VERTICAL);
+        if (theme.date) {
+            TextClock date = clock(day, day, px(30), 0xA8FFFFFF, regular);
+            // Wrap, not the default match_parent: the column must be as wide as the date, not just the
+            // time, or "0:00" to "9:59" (one digit less) cuts a long date off.
+            clock.addView(date, new LinearLayout.LayoutParams(-2, -2));
+        }
+        if (theme.clock == Theme.CLOCK_SCOREBOARD) {
+            // Amber digits on a dark board, like a stadium scoreboard.
+            TextClock time = clock("hh:mm", "HH:mm", px(118), color,
+                    Typeface.create("monospace", Typeface.BOLD));
+            time.setFontFeatureSettings("tnum");
+            time.setIncludeFontPadding(false);
+            time.setShadowLayer(px(18), 0, 0, (color & 0x00FFFFFF) | 0x99000000);
+            GradientDrawable board = new GradientDrawable();
+            board.setCornerRadius(px(12));
+            board.setColor(0xE6050A07);
+            board.setStroke(Math.max(1, px(3)), 0x40FFFFFF);
+            time.setBackground(board);
+            time.setPadding(px(34), px(18), px(34), px(18));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            lp.topMargin = px(14);
+            clock.addView(time, lp);
+        } else {
+            TextClock time = clock("h:mm", "H:mm", px(176), color, semibold);
+            time.setLetterSpacing(-0.028f);
+            time.setFontFeatureSettings("tnum");
+            time.setIncludeFontPadding(false);
+            if (theme.neon) time.setShadowLayer(px(28), 0, 0, theme.clockColor);
+            LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-2, -2);
+            tp.topMargin = px(-20); // pull the big digits up under the date
+            clock.addView(time, tp);
+            if (theme.phrases != null) {
+                phraseView = text(px(34), 0xD9FFFFFF, regular);
+                phraseView.setText(theme.phrase());
+                phraseView.setShadowLayer(px(10), 0, 0, 0xCC000000);
+                clock.addView(phraseView);
+            }
+        }
+        clockView = clock;
+        root.addView(clock, at(px(MARGIN), px(92), -2, -2));
+    }
+
     // The wallpapers, each with a small dot of its colours. Moving through the list shows each one
     // behind the panel; OK keeps it, Back goes back to the one before.
     private void showWallpapers() {
@@ -386,13 +573,14 @@ public class MainActivity extends Activity {
             ((ViewGroup) wrap.getParent()).removeView(wrap);
         }
         tiles.clear();
+        rings.clear();
         rowApps.clear();
         movingKey = null;
         moveHint.setVisibility(View.GONE);
 
         PackageManager pm = getPackageManager();
         int m = px(MARGIN), g = px(GAP);
-        int w = (getResources().getDisplayMetrics().widthPixels - 2 * m - g * (PER_ROW - 1)) / PER_ROW;
+        int w = (getResources().getDisplayMetrics().widthPixels - 2 * m - g * (perRow() - 1)) / perRow();
         int h = w * 9 / 16;
         tileW = w;
         tileH = h;
@@ -402,9 +590,11 @@ public class MainActivity extends Activity {
         // the bottom row still fit on screen; past that the page scrolls.
         int launchable = 0;
         for (String pkg : apps) if (launchIntent(pm, pkg) != null) launchable++;
-        int rows = Math.max(1, (launchable + PER_ROW - 1) / PER_ROW);
-        gridTop = Math.max(px(GRID_MIN_TOP), px(ROW1_TOP) - (rows - 1) * px(ROW_STEP));
-        int bottomTop = gridTop + rows * px(ROW_STEP);
+        int rows = Math.max(1, (launchable + perRow() - 1) / perRow());
+        // A small clock (Cinema) leaves room higher up, for its bigger tiles.
+        boolean small = theme.clock == Theme.CLOCK_SMALL;
+        gridTop = Math.max(px(small ? 200 : GRID_MIN_TOP), px(small ? 330 : ROW1_TOP) - (rows - 1) * rowStep());
+        int bottomTop = gridTop + rows * rowStep();
         ((FrameLayout.LayoutParams) moveHint.getLayoutParams()).topMargin = gridTop - px(64);
         root.setMinimumHeight(bottomTop + h + px(MARGIN));
 
@@ -430,7 +620,7 @@ public class MainActivity extends Activity {
         int col = 0;
         boolean store = !apps.contains(PLAY_STORE) && launchIntent(pm, PLAY_STORE) != null;
         List<TvInputInfo> inputs = hdmiInputs();
-        int room = PER_ROW - 2 - (store ? 1 : 0);
+        int room = perRow() - 2 - (store ? 1 : 0);
         if (inputs.size() > room) inputs = inputs.subList(0, room);
         if (store)
             addTile(root, PLAY_STORE, "Play Store", null, LineIcon.PLAY, null, m + col++ * (w + g), bottomTop, w, h);
@@ -467,7 +657,7 @@ public class MainActivity extends Activity {
                          int x, int y, int w, int h) {
         FrameLayout card = new FrameLayout(this);
         final GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(px(RADIUS));
+        bg.setCornerRadius(px(theme.radius));
         if (banner != null) {
             bg.setColor(0xFF1E1A1C);
             ImageView iv = new ImageView(this);
@@ -475,7 +665,7 @@ public class MainActivity extends Activity {
             card.addView(iv, new FrameLayout.LayoutParams(-1, -1));
         } else {
             // Quiet "glass" tile: icon above label.
-            bg.setColor(0x13FFFFFF);
+            bg.setColor(theme.glass);
             bg.setStroke(Math.max(1, px(2)), 0x17FFFFFF);
             LinearLayout inner = new LinearLayout(this);
             inner.setOrientation(LinearLayout.VERTICAL);
@@ -488,6 +678,7 @@ public class MainActivity extends Activity {
             TextView t = text(px(24), 0xE0FFFFFF, regular);
             t.setText(label);
             t.setSingleLine(true);
+            t.setAllCaps(theme.caps);
             t.setEllipsize(android.text.TextUtils.TruncateAt.END);
             t.setGravity(Gravity.CENTER);
             t.setPadding(px(16), 0, px(16), 0);
@@ -501,21 +692,45 @@ public class MainActivity extends Activity {
         card.setFocusable(true);
         card.setTag(key);
 
-        // Banner tiles show their name underneath when focused.
+        // Banner tiles show their name underneath when focused (always, in themes with labels).
         final TextView caption = banner == null ? null : text(px(24), Color.WHITE, regular);
         if (caption != null) {
             caption.setText(label);
             caption.setGravity(Gravity.CENTER_HORIZONTAL);
-            caption.setVisibility(View.INVISIBLE);
+            caption.setSingleLine(true);
+            caption.setAllCaps(theme.caps);
+            caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            caption.setVisibility(theme.labels ? View.VISIBLE : View.INVISIBLE);
+            caption.setAlpha(theme.labels ? 0.6f : 1f);
+        }
+
+        // Themes with an accent outline the focused tile in it; neon ones keep a faint outline on all.
+        final GradientDrawable ring = theme.accent != 0 ? new GradientDrawable() : null;
+        if (ring != null) {
+            ring.setCornerRadius(px(theme.radius));
+            ring.setStroke(Math.max(2, px(4)), theme.neon ? (theme.accent & 0x00FFFFFF) | 0x50000000 : Color.TRANSPARENT);
+            card.setForeground(ring);
+            rings.put(card, ring);
+            if (theme.neon && android.os.Build.VERSION.SDK_INT >= 28) {
+                card.setOutlineSpotShadowColor(theme.accent);
+                card.setOutlineAmbientShadowColor(theme.accent);
+            }
         }
 
         final boolean glass = banner == null;
+        final float zoom = theme.zoom;
         card.setOnFocusChangeListener((v, has) -> {
             if (has) focusedKey = key;
-            if (glass) bg.setColor(has ? 0x38FFFFFF : 0x13FFFFFF);
-            v.animate().scaleX(has ? 1.1f : 1f).scaleY(has ? 1.1f : 1f).translationZ(has ? px(26) : 0)
+            if (glass) bg.setColor(has ? theme.glassFocus : theme.glass);
+            if (ring != null && !key.equals(movingKey))
+                ring.setStroke(Math.max(2, px(4)), has ? theme.accent
+                        : theme.neon ? (theme.accent & 0x00FFFFFF) | 0x50000000 : Color.TRANSPARENT);
+            v.animate().scaleX(has ? zoom : 1f).scaleY(has ? zoom : 1f).translationZ(has ? px(26) : 0)
                     .setDuration(140).withLayer().start();
-            if (caption != null) caption.setVisibility(has ? View.VISIBLE : View.INVISIBLE);
+            if (caption != null) {
+                if (theme.labels) caption.setAlpha(has ? 1f : 0.6f);
+                else caption.setVisibility(has ? View.VISIBLE : View.INVISIBLE);
+            }
         });
         final boolean editable = rowApps.contains(key);
         card.setOnClickListener(v -> open(key));
@@ -577,7 +792,7 @@ public class MainActivity extends Activity {
         card.setContentDescription(label);
         card.setOnFocusChangeListener((v, has) -> {
             if (has) focusedKey = key;
-            bg.setColor(has ? 0x38FFFFFF : Color.TRANSPARENT);
+            bg.setColor(has ? theme.glassFocus : Color.TRANSPARENT);
             v.animate().scaleX(has ? 1.1f : 1f).scaleY(has ? 1.1f : 1f).setDuration(140).withLayer().start();
         });
         card.setOnClickListener(v -> open(key));
@@ -595,9 +810,16 @@ public class MainActivity extends Activity {
             showAddMenu(-1);
             return;
         } else if (SETTINGS.equals(key)) {
-            dropdown(tile(SETTINGS), SETTINGS_ITEMS, which -> {
-                if (which == 0) showWallpapers();
-                else if (which == 1) openBrightness();
+            final boolean classic = theme.bg == null;
+            final String[] menu = new String[SETTINGS_ITEMS.length + (classic ? 1 : 0)];
+            menu[0] = "Theme";
+            if (classic) { menu[1] = "Wallpaper"; System.arraycopy(SETTINGS_ITEMS, 1, menu, 2, SETTINGS_ITEMS.length - 1); }
+            else System.arraycopy(SETTINGS_ITEMS, 1, menu, 1, SETTINGS_ITEMS.length - 1);
+            dropdown(tile(SETTINGS), menu, which -> {
+                String item = menu[which];
+                if (item.equals("Theme")) showThemes();
+                else if (item.equals("Wallpaper")) showWallpapers();
+                else if (item.equals("Brightness")) openBrightness();
                 else openTvSettings();
             });
             return;
@@ -805,8 +1027,8 @@ public class MainActivity extends Activity {
         list.setVerticalScrollBarEnabled(false);
         list.setOverScrollMode(View.OVER_SCROLL_NEVER);
         GradientDrawable focus = new GradientDrawable();
-        focus.setCornerRadius(px(RADIUS));
-        focus.setColor(0x38FFFFFF);
+        focus.setCornerRadius(px(theme.radius));
+        focus.setColor(theme.glassFocus);
         list.setSelector(focus);
         // Icons load as rows appear, drawn small to save RAM.
         final Drawable[] icons = new Drawable[labels.size()];
@@ -852,7 +1074,7 @@ public class MainActivity extends Activity {
 
         d.setContentView(box);
         Window w = d.getWindow();
-        w.setBackgroundDrawable(new ColorDrawable(preview != null ? 0xFF161113 : 0xF7161113));
+        w.setBackgroundDrawable(new ColorDrawable(preview != null ? theme.panel : (theme.panel & 0x00FFFFFF) | 0xF7000000));
         w.setLayout(px(640), -1);
         w.setGravity(Gravity.END);
         w.setDimAmount(preview != null ? 0f : 0.5f); // a preview needs the home screen undimmed
@@ -868,8 +1090,8 @@ public class MainActivity extends Activity {
         int pad = px(10), rowH = px(64);
         box.setPadding(pad, pad, pad, pad);
         GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(px(RADIUS));
-        bg.setColor(0xFF231D1F);
+        bg.setCornerRadius(px(theme.radius));
+        bg.setColor(theme.panel);
         bg.setStroke(Math.max(1, px(2)), 0x17FFFFFF);
         box.setBackground(bg);
         float widest = 0; // some languages need more room than the tile is wide
@@ -882,12 +1104,12 @@ public class MainActivity extends Activity {
             t.setPadding(px(22), 0, px(22), 0);
             widest = Math.max(widest, t.getPaint().measureText(t.getText().toString()) + 2 * px(22) + 2 * pad);
             final GradientDrawable focus = new GradientDrawable();
-            focus.setCornerRadius(px(RADIUS - pad));
+            focus.setCornerRadius(px(Math.max(2, theme.radius - pad)));
             focus.setColor(Color.TRANSPARENT);
             t.setBackground(focus);
             t.setFocusable(true);
             t.setOnFocusChangeListener((v, has) -> {
-                focus.setColor(has ? 0x38FFFFFF : Color.TRANSPARENT);
+                focus.setColor(has ? theme.glassFocus : Color.TRANSPARENT);
                 t.setTextColor(has ? Color.WHITE : 0xD9FFFFFF);
             });
             t.setOnClickListener(v -> {
@@ -988,13 +1210,22 @@ public class MainActivity extends Activity {
         getSharedPreferences(PREFS, 0).edit().putString("apps", android.text.TextUtils.join(",", rowApps)).apply();
     }
 
+    private int perRow() {
+        return theme.perRow;
+    }
+
+    // Rows sit far enough apart for the name under a focused tile, however big the theme's tiles are.
+    private int rowStep() {
+        return Math.max(px(ROW_STEP), tileH + px(78));
+    }
+
     // Where app number i sits in the grid.
     private int gridX(int i) {
-        return px(MARGIN) + (i % PER_ROW) * (tileW + px(GAP));
+        return px(MARGIN) + (i % perRow()) * (tileW + px(GAP));
     }
 
     private int gridY(int i) {
-        return gridTop + (i / PER_ROW) * px(ROW_STEP);
+        return gridTop + (i / perRow()) * rowStep();
     }
 
     private View tile(String key) {
@@ -1008,7 +1239,7 @@ public class MainActivity extends Activity {
         if (card == null) return;
         movingKey = key;
         GradientDrawable outline = new GradientDrawable();
-        outline.setCornerRadius(px(RADIUS));
+        outline.setCornerRadius(px(theme.radius));
         outline.setStroke(px(4), Color.WHITE);
         ((FrameLayout) card).setForeground(outline);
         moveHint.setVisibility(View.VISIBLE);
@@ -1017,7 +1248,7 @@ public class MainActivity extends Activity {
 
     private boolean moveKey(String key, int code, boolean ok, boolean down) {
         int step = code == KeyEvent.KEYCODE_DPAD_LEFT ? -1 : code == KeyEvent.KEYCODE_DPAD_RIGHT ? 1
-                : code == KeyEvent.KEYCODE_DPAD_UP ? -PER_ROW : code == KeyEvent.KEYCODE_DPAD_DOWN ? PER_ROW : 0;
+                : code == KeyEvent.KEYCODE_DPAD_UP ? -perRow() : code == KeyEvent.KEYCODE_DPAD_DOWN ? perRow() : 0;
         if (step != 0) {
             int from = rowApps.indexOf(key), to = from + step;
             if (down && to >= 0 && to < rowApps.size()) {
@@ -1041,7 +1272,8 @@ public class MainActivity extends Activity {
             if (!down) {
                 movingKey = null;
                 longPressed = false;
-                ((FrameLayout) tile(key)).setForeground(null);
+                View moved = tile(key);
+                ((FrameLayout) moved).setForeground(rings.get(moved));
                 moveHint.setVisibility(View.GONE);
                 saveRow();
                 refreshApps();
@@ -1094,8 +1326,14 @@ public class MainActivity extends Activity {
     }
 
     // Xiaomi TVs ship MiLan Pro but don't register it by name; every other TV gets Roboto.
-    private static void loadFonts() {
+    // A theme with its own font family uses it throughout.
+    private static void loadFonts(Theme t) {
         if (regular != null) return;
+        if (t.font != null) {
+            regular = Typeface.create(t.font, Typeface.NORMAL);
+            semibold = Typeface.create(t.font, Typeface.BOLD);
+            return;
+        }
         regular = fromFile("/system/fonts/MILanPro_Normal.ttf", Typeface.create("sans-serif", Typeface.NORMAL));
         semibold = fromFile("/system/fonts/MILanPro_SemiBold.ttf", Typeface.create("sans-serif-medium", Typeface.NORMAL));
     }
@@ -1131,7 +1369,7 @@ public class MainActivity extends Activity {
         c.setFormat12Hour(f12);
         c.setFormat24Hour(f24);
         c.setTextSize(TypedValue.COMPLEX_UNIT_PX, px);
-        c.setTextColor(color);
+        c.setTextColor(color == theme.clockColor ? color : tint(color));
         c.setTypeface(tf);
         return c;
     }
@@ -1139,10 +1377,42 @@ public class MainActivity extends Activity {
     private TextView text(int px, int color, Typeface tf) {
         TextView t = new TextView(this);
         t.setTextSize(TypedValue.COMPLEX_UNIT_PX, px);
-        t.setTextColor(color);
+        t.setTextColor(tint(color));
+        t.setAllCaps(theme.caps);
         if (tf != null) t.setTypeface(tf);
         return t;
     }
+
+    // White text takes the theme's text colour, keeping its transparency.
+    private int tint(int color) {
+        return (color & 0x00FFFFFF) == 0x00FFFFFF ? (color & 0xFF000000) | (theme.textColor & 0x00FFFFFF) : color;
+    }
+
+    // What the Terminal theme's commands can do.
+    private final Terminal.Host terminalHost = new Terminal.Host() {
+        @Override public List<String[]> apps() {
+            PackageManager pm = getPackageManager();
+            java.util.TreeMap<String, String> byName = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            for (String cat : new String[] {Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER})
+                for (ResolveInfo ri : pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(cat), 0)) {
+                    String pkg = ri.activityInfo.packageName;
+                    if (pkg.equals(getPackageName()) || NOT_APPS.contains(pkg) && !pkg.equals(PLAY_STORE)) continue;
+                    byName.put(ri.loadLabel(pm).toString(), pkg);
+                }
+            List<String[]> out = new ArrayList<>();
+            for (java.util.Map.Entry<String, String> e : byName.entrySet()) out.add(new String[] {e.getKey(), e.getValue()});
+            return out;
+        }
+        @Override public void open(String pkg) { MainActivity.this.open(pkg); }
+        @Override public void theme(String name) {
+            getSharedPreferences(PREFS, 0).edit().putString("theme", name).apply();
+            applyTheme(Theme.indexOf(name));
+        }
+        @Override public void settings(boolean network) {
+            if (network) openNetworkSettings();
+            else openTvSettings();
+        }
+    };
 
     private static FrameLayout.LayoutParams at(int x, int y, int w, int h) {
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, h);

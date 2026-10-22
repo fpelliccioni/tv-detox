@@ -25,6 +25,30 @@ Claude Code or Codex does the work. You just press OK on the remote.
 
 </div>
 
+> **This fork adds themes.** Everything else is [Ansub/tv-detox](https://github.com/Ansub/tv-detox): same cleanup, same scripts, same tiny home screen.
+> **Este fork agrega temas.** Todo lo demás es igual al original.
+
+## Themes / Temas
+
+Pick one on the TV with **Settings → Theme** (**Ajustes → Tema**). The screen changes as you move through the list; **OK** keeps it, **Back** leaves things as they were. From a computer: `adb shell am start -n com.ansub.tvhome/.MainActivity --es theme Matrix`
+
+| | |
+|---|---|
+| **Clásico** — the original look, with its 14 wallpapers<br><img src="docs/themes/clasico.jpg" width="100%"> | **Cine** — black, Netflix red focus, small clock, bigger tiles<br><img src="docs/themes/cine.jpg" width="100%"> |
+| **Minimal** — flat graphite, thin centred clock<br><img src="docs/themes/minimal.jpg" width="100%"> | **Estadio** — a mowed pitch, the clock on a scoreboard<br><img src="docs/themes/estadio.jpg" width="100%"> |
+| **Retro** — 80s synthwave sunset and neon grid<br><img src="docs/themes/retro.jpg" width="100%"> | **River** — red sash, chants, and a slideshow of your own photos<br><img src="docs/themes/river.jpg" width="100%"> |
+| **Argentina** — celeste y blanco, Sol de Mayo, mate y asado<br><img src="docs/themes/argentina.jpg" width="100%"> | **Matrix** — falling green code (animated)<br><img src="docs/themes/matrix.jpg" width="100%"> |
+| **C64** — the Commodore 64 start-up screen, blinking cursor<br><img src="docs/themes/c64.jpg" width="100%"> | **Terminal** — type commands: `ls`, `open netflix`, `theme matrix`, `neofetch`, `help`<br><img src="docs/themes/terminal.jpg" width="100%"> |
+
+**Foto** and **River** show your own photos. Nothing is downloaded: copy them to the app's folder on the TV.
+
+```sh
+adb push foto.jpg  /sdcard/Android/data/com.ansub.tvhome/files/fondo.jpg   # Foto: one photo
+adb push mis-fotos/. /sdcard/Android/data/com.ansub.tvhome/files/river/    # River: a slideshow (jpg, png, webp)
+```
+
+Animations (Matrix, the River slideshow) only run while the home screen is showing, so apps never pay for them.
+
 <table>
 <tr>
 <td width="33%" valign="top"><b>🧹 Removes the junk</b><br>Bloatware, ads and sponsored rows, gone.</td>
