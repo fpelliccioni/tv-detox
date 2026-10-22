@@ -48,6 +48,8 @@ export function Photos({ folders, every = 12000, fallback }: { folders: string[]
     return out;
   });
   const [i, setI] = useState(0);
+  // Photos that aren't wide enough to fill the screen (by name), learned as they load.
+  const [whole, setWhole] = useState<Record<string, boolean>>({});
   useEffect(() => {
     if (list.length < 2) return;
     const id = setInterval(() => setI((n) => (n + 1) % list.length), every);
@@ -81,11 +83,12 @@ export function Photos({ folders, every = 12000, fallback }: { folders: string[]
       {list.map((p, n) => (
         // Photos far from 16:9 (square, portrait) are shown whole, over a blurred copy of themselves,
         // instead of being cropped to fill the screen.
-        <div key={p} className={`photo ${n === i ? "on" : ""}`}>
+        <div key={p} className={`photo ${n === i ? "on" : ""} ${whole[p] ? "whole" : ""}`}>
           {Math.abs(n - i) <= 1 && <>
             <img className="fill" src={photoUrl(p)} alt="" />
             <img className="main" src={photoUrl(p)} alt=""
-              onLoad={(e) => { const im = e.currentTarget; if (im.naturalWidth / im.naturalHeight < 1.45) im.parentElement!.classList.add("whole"); }} />
+              onLoad={(e) => { const im = e.currentTarget; const w = im.naturalWidth / im.naturalHeight < 1.45;
+                if (w !== !!whole[p]) setWhole((x) => ({ ...x, [p]: w })); }} />
           </>}
         </div>
       ))}
