@@ -36,6 +36,9 @@ export const Wallpaper = ({ index }: { index: number }) => (
 export function Photos({ folders, every = 12000, fallback }: { folders: string[]; every?: number; fallback?: string }) {
   const [list, setList] = useState(() => {
     if (!folders.length) return bridge.photos("").filter((n) => /^fondo\./i.test(n));
+    // Browser preview: ?solo=lbdt shows only that folder, to review it.
+    const solo = !onTV && new URLSearchParams(location.search).get("solo");
+    if (solo) folders = [solo];
     // Every photo from every folder, shuffled (a new order each time the home screen starts).
     const out = folders.flatMap((f) => bridge.photos(f).map((n) => `${f}/${n}`));
     for (let i = out.length - 1; i > 0; i--) {
@@ -76,7 +79,15 @@ export function Photos({ folders, every = 12000, fallback }: { folders: string[]
   return (
     <div className="bg photos">
       {list.map((p, n) => (
-        <img key={p} src={photoUrl(p)} className={n === i ? "on" : ""} alt="" loading={Math.abs(n - i) <= 1 ? "eager" : "lazy"} />
+        // Photos far from 16:9 (square, portrait) are shown whole, over a blurred copy of themselves,
+        // instead of being cropped to fill the screen.
+        <div key={p} className={`photo ${n === i ? "on" : ""}`}>
+          {Math.abs(n - i) <= 1 && <>
+            <img className="fill" src={photoUrl(p)} alt="" />
+            <img className="main" src={photoUrl(p)} alt=""
+              onLoad={(e) => { const im = e.currentTarget; if (im.naturalWidth / im.naturalHeight < 1.45) im.parentElement!.classList.add("whole"); }} />
+          </>}
+        </div>
       ))}
       <div className="shade" />
       {!onTV && <div className="photo-name">{i + 1}/{list.length} · {list[i]}</div>}

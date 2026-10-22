@@ -92,8 +92,12 @@ body { display: block; }
 
 /* Foto: your photo. */
 .theme-foto { --accent: #fff; --ring: 4px; --glass: rgba(0,0,0,.3); --glass-focus: rgba(255,255,255,.3); }
-.photos img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.2s; }
-.photos img.on { opacity: 1; }
+.photos .photo { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s; }
+.photos .photo.on { opacity: 1; }
+.photos .photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.photos .photo .fill { display: none; }
+.photos .photo.whole .fill { display: block; filter: blur(40px) brightness(.55); transform: scale(1.15); }
+.photos .photo.whole .main { object-fit: contain; }
 .photo-name { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 5; padding: 6px 16px; border-radius: 8px; background: rgba(0,0,0,.75); color: #ffe14d; font: 600 26px/1.2 ui-monospace, monospace; white-space: nowrap; }
 /* Idle: everything but the photos fades away (App.tsx). */
 .page, .photos .shade { transition: opacity 1.2s ease; }
