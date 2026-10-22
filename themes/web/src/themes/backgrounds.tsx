@@ -58,10 +58,12 @@ export function Photos({ folders, every = 12000, fallback }: { folders: string[]
       if (e.target instanceof HTMLInputElement) return;
       if (e.key === "]") setI((n) => (n + 1) % list.length);
       if (e.key === "[") setI((n) => (n - 1 + list.length) % list.length);
-      // d: discard this photo (moved to descartadas/ on the computer), and show the next one.
-      if (e.key === "d" && list.length) {
+      // d: discard this photo, e: set it aside to be improved. Either way it leaves the slideshow
+      // (moved on the computer to descartadas/ or mejorar/) and the next one shows.
+      const to = e.key === "d" ? "descartadas" : e.key === "e" ? "mejorar" : null;
+      if (to && list.length) {
         const gone = list[i];
-        fetch(`./mock/discard?path=${encodeURIComponent(gone)}`, { method: "POST" }).then((r) => {
+        fetch(`./mock/move?path=${encodeURIComponent(gone)}&to=${to}`, { method: "POST" }).then((r) => {
           if (!r.ok) return;
           setList((l) => l.filter((p) => p !== gone));
           setI((n) => (list.length > 1 ? n % (list.length - 1) : 0));

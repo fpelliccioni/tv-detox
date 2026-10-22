@@ -19,16 +19,22 @@ const mockPhotos = (): Plugin => ({
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify(out));
     });
-    // Discards a photo (POST /mock/discard?path=river/x.jpg): moves it to descartadas/ next to it.
-    server.middlewares.use("/mock/discard", (req, res) => {
-      const rel = new URL(req.url ?? "", "http://x").searchParams.get("path") ?? "";
+    // Moves a photo out of the slideshow (POST /mock/move?path=river/x.jpg&to=descartadas): into
+    // descartadas/ (thrown out) or mejorar/ (to be improved, then put back) next to it.
+    server.middlewares.use("/mock/move", (req, res) => {
+      const params = new URL(req.url ?? "", "http://x").searchParams;
+      const rel = params.get("path") ?? "", to = params.get("to") ?? "";
+      if (to !== "descartadas" && to !== "mejorar") {
+        res.statusCode = 400;
+        return res.end("bad folder");
+      }
       const base = join(server.config.publicDir, "mock/photo");
       if (req.method !== "POST" || !/^([\w.-]+\/)?[\w.-]+\.(jpe?g|png|webp)$/i.test(rel) || rel.includes("..")) {
         res.statusCode = 400;
         return res.end("bad request");
       }
       const file = realpathSync(join(base, rel));
-      const dest = join(dirname(file), "descartadas");
+      const dest = join(dirname(file), to);
       if (!existsSync(dest)) mkdirSync(dest);
       renameSync(file, join(dest, basename(file)));
       res.end("ok");
