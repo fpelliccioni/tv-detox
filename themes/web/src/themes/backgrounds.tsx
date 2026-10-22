@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { bridge, photoUrl } from "../bridge";
+import { bridge, onTV, photoUrl } from "../bridge";
 import leon from "../assets/river/leon-clasico.svg";
 import catorce from "../assets/river/14.png";
 
@@ -48,7 +48,17 @@ export function Photos({ folders, every = 12000, fallback }: { folders: string[]
     if (list.length < 2) return;
     const id = setInterval(() => setI((n) => (n + 1) % list.length), every);
     return () => clearInterval(id);
-  }, [list, every]);
+  }, [list, every, i]); // a manual step restarts the 12 seconds
+  // Browser preview: [ and ] step through the photos, to review them.
+  useEffect(() => {
+    if (onTV) return;
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "]") setI((n) => (n + 1) % list.length);
+      if (e.key === "[") setI((n) => (n - 1 + list.length) % list.length);
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [list]);
   if (!list.length) return fallback ? <div className="bg" style={{ background: fallback }} /> : null;
   return (
     <div className="bg photos">
@@ -56,6 +66,7 @@ export function Photos({ folders, every = 12000, fallback }: { folders: string[]
         <img key={p} src={photoUrl(p)} className={n === i ? "on" : ""} alt="" loading={Math.abs(n - i) <= 1 ? "eager" : "lazy"} />
       ))}
       <div className="shade" />
+      {!onTV && <div className="photo-name">{i + 1}/{list.length} · {list[i]}</div>}
     </div>
   );
 }
