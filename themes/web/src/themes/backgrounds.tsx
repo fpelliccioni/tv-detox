@@ -53,7 +53,10 @@ export function Photos({ folder, every = 12000, fallback }: { folder: string; ev
 }
 
 // River's shirt: the red sash from the left shoulder to the right hip (seen from the front: top
-// right to bottom left), wide, with thin white edges.
+// right to bottom left), at 59.88 degrees like the club's 2022 identity, wide, edged in white.
+const SASH_ANGLE = 59.88, SASH_TOP = 1180, SASH_WIDTH = 560; // where it starts on the top edge, and how wide it is across
+const run = 1080 / Math.tan((SASH_ANGLE * Math.PI) / 180); // how far left it goes from top to bottom
+const sash = `${SASH_TOP},0 ${SASH_TOP + SASH_WIDTH},0 ${SASH_TOP + SASH_WIDTH - run},1080 ${SASH_TOP - run},1080`;
 export const Sash = () => (
   <svg className="bg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
     <defs>
@@ -62,8 +65,8 @@ export const Sash = () => (
         <stop offset="1" stopColor="#b8000f" />
       </linearGradient>
     </defs>
-    <polygon points="1010,0 1590,0 830,1080 250,1080" fill="url(#sashShade)" opacity=".93" />
-    <polygon points="1010,0 1590,0 830,1080 250,1080" fill="none" stroke="#fff" strokeWidth="10" opacity=".85" />
+    <polygon points={sash} fill="url(#sashShade)" opacity=".93" />
+    <polygon points={sash} fill="none" stroke="#fff" strokeWidth="10" opacity=".85" />
   </svg>
 );
 

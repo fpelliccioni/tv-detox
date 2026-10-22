@@ -1,2 +1,4 @@
 node_modules/
 dist/
+# The browser preview copies your own TV apps here (make-mock): personal, never committed.
+public/mock/

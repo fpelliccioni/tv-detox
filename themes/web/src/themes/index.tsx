@@ -12,6 +12,7 @@ export type Theme = {
   perRow?: number; // apps per row (default 6)
   gridTop?: number; // where the apps start, out of 1080 (default 600)
   swatch: string; // the dot in the theme list
+  ready?: boolean; // can be picked; the others are listed as coming soon
 };
 
 const RIVER = ["Vamos River, vamos River", "El más grande sigue siendo River", "Los Borrachos del Tablón",
@@ -22,14 +23,14 @@ const NERD = ["wake up, neo...", "follow the white rabbit", "there is no spoon",
   "it works on my machine", "// TODO: go outside", "git push --force  # yolo"];
 
 export const THEMES: Theme[] = [
-  { id: "clasico", name: "Clásico", background: (w) => <Wallpaper index={w} />, header: <BigClock />, swatch: "linear-gradient(135deg,#ff8048,#15100f,#aa3c8c)" },
+  { id: "clasico", name: "Clásico", ready: true, background: (w) => <Wallpaper index={w} />, header: <BigClock />, swatch: "linear-gradient(135deg,#ff8048,#15100f,#aa3c8c)" },
   { id: "cine", name: "Cine", background: () => <div className="bg cine" />, header: <SmallClock />, perRow: 5, gridTop: 200, swatch: "linear-gradient(135deg,#000 40%,#e50914)" },
   { id: "minimal", name: "Minimal", background: () => <div className="bg minimal" />, header: <CenterClock />, swatch: "#2a2b2e" },
   { id: "estadio", name: "Estadio", background: () => <Pitch />, header: <Scoreboard />, swatch: "linear-gradient(135deg,#1f6b3b,#082414)" },
   { id: "foto", name: "Foto", background: () => <Photos folder="" fallback="linear-gradient(#14243a,#050a12)" />, header: <BigClock />, swatch: "linear-gradient(135deg,#4a6cff,#26b4c8)" },
   { id: "retro", name: "Retro", background: () => <Synthwave />, header: <BigClock />, swatch: "linear-gradient(135deg,#ff2e97,#ffe14d)" },
   {
-    id: "river", name: "River",
+    id: "river", name: "River", ready: true,
     background: () => <><div className="bg river" /><Photos folder="river" /><Sash /></>,
     header: <BigClock phrases={RIVER} />, swatch: "linear-gradient(135deg,#fff 35%,#e30613 35%,#e30613 65%,#fff 65%)",
   },

@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { App as AppInfo, bridge, iconUrl, Input, Net, onEvent } from "./bridge";
+import { App as AppInfo, bridge, iconUrl, Input, Net, onEvent, onTV } from "./bridge";
 import { Config, DEFAULT_APPS, load, merge, save } from "./config";
 import { t } from "./i18n";
 import { Bluetooth, Gear, Hdmi, Picture, Play, Plus, Sound, Wifi } from "./icons";
@@ -52,7 +52,7 @@ function Tile({ k, label, banner, icon, first, moving, onActivate, onLongPress }
   );
 }
 
-type Item = { label: string; swatch?: string; icon?: string; check?: boolean; run: () => void };
+type Item = { label: string; swatch?: string; icon?: string; check?: boolean; note?: string; disabled?: boolean; run: () => void };
 type Menu =
   | { kind: "dropdown"; anchor: string; items: Item[] }
   | { kind: "panel"; title: string; items: Item[]; start?: number; preview?: (i: number) => void; cancel?: () => void };
@@ -80,21 +80,41 @@ function Panel({ menu }: { menu: Extract<Menu, { kind: "panel" }> }) {
       <div className="side-panel" data-nav-scope="">
         <h2>{menu.title}</h2>
         <div className="list">
-          {menu.items.map((it, i) => (
-            <Focusable key={i} k={`p${i}`} first={i === (menu.start ?? 0)} className="p-item" onActivate={it.run}
-              onFocus={() => menu.preview?.(i)}>
+          {menu.items.map((it, i) => {
+            const inner = <>
               {it.swatch && <span className="swatch" style={{ background: it.swatch }} />}
               {it.icon !== undefined && <img className="p-icon" src={it.icon} alt="" />}
               <span className="p-label">{it.label}</span>
-            </Focusable>
-          ))}
+              {it.note && <span className="p-note">{it.note}</span>}
+            </>;
+            // Not ready yet: listed, but the remote skips it.
+            if (it.disabled) return <div key={i} className="p-item disabled">{inner}</div>;
+            return (
+              <Focusable key={i} k={`p${i}`} first={i === (menu.start ?? 0)} className="p-item" onActivate={it.run}
+                onFocus={() => menu.preview?.(i)}>{inner}</Focusable>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
 
+// Browser preview only: try fonts for River's lettering without rebuilding.
+const RIVER_FONTS = ["River Plate TV", "Oswald", "Barlow Condensed", "Saira Condensed", "Bebas Neue", "Anton", "Archivo Black"];
+function FontPicker({ font, set }: { font: string; set: (f: string) => void }) {
+  return (
+    <div className="font-picker">
+      <b>Tipografía</b>
+      {RIVER_FONTS.map((f) => (
+        <button key={f} className={f === font ? "on" : ""} style={{ fontFamily: f }} onClick={() => set(f)}>{f}</button>
+      ))}
+    </div>
+  );
+}
+
 export default function Home() {
+  const [riverFont, setRiverFont] = useState(() => localStorage.getItem("riverFont") || "River Plate TV");
   const [config, setConfig] = useState<Config>(() => merge(load(), bridge.config()));
   const [apps, setApps] = useState<AppInfo[]>(() => bridge.apps());
   const [inputs, setInputs] = useState<Input[]>(() => bridge.inputs());
@@ -102,12 +122,14 @@ export default function Home() {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [preview, setPreview] = useState<{ theme?: string; wallpaper?: number } | null>(null);
   const [moving, setMoving] = useState<string | null>(null);
-  const [scale, setScale] = useState(() => window.innerWidth / 1920);
+  // The page is 1920x1080, scaled to fit (on a TV that's the whole screen; in a browser, the window).
+  const fit = () => Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  const [scale, setScale] = useState(fit);
   const lastFocus = useRef<string | null>(null);
 
   useEffect(() => save(config), [config]);
   useEffect(() => {
-    const r = () => setScale(window.innerWidth / 1920);
+    const r = () => setScale(fit());
     window.addEventListener("resize", r);
     return () => window.removeEventListener("resize", r);
   }, []);
@@ -216,7 +238,8 @@ export default function Home() {
     const items: Item[] = [{
       label: t("Theme"), run: () => setMenu({
         kind: "panel", title: t("Theme"), start: THEMES.findIndex((x) => x.name === config.theme),
-        items: THEMES.map((x) => ({ label: x.name, swatch: x.swatch, run: () => { update({ theme: x.name }); close(); } })),
+        items: THEMES.map((x) => ({ label: x.name, swatch: x.swatch, disabled: !x.ready, note: x.ready ? undefined : t("coming soon"),
+          run: () => { update({ theme: x.name }); close(); } })),
         preview: (i) => setPreview({ theme: THEMES[i].name }), cancel: () => setPreview(null),
       }),
     }];
@@ -261,7 +284,8 @@ export default function Home() {
 
   return (
     <HomeContext.Provider value={home}>
-      <div className={`stage theme-${theme.id}`} style={{ transform: `scale(${scale})`, ["--per-row" as string]: perRow }}>
+      {!onTV && theme.id === "river" && <FontPicker font={riverFont} set={(f) => { setRiverFont(f); localStorage.setItem("riverFont", f); }} />}
+      <div className={`stage theme-${theme.id}`} style={{ transform: `scale(${scale})`, ["--per-row" as string]: perRow, ["--river-font" as string]: `"${riverFont}"` }}>
         <div className="backdrop" key={theme.id + (theme.id === "clasico" ? wallpaper : "")}>{theme.background(wallpaper)}</div>
         <div className="page">
           <div className="header" key={theme.id}>{theme.header}</div>

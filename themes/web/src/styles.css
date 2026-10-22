@@ -69,6 +69,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
 .p-item:focus { background: var(--glass-focus); }
 .swatch { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255,255,255,.2); flex: none; }
 .p-icon { width: 48px; height: 48px; flex: none; }
+.p-item.disabled { opacity: .35; }
+/* Browser preview: the font picker, outside the TV screen. */
+.font-picker { position: fixed; right: 12px; bottom: 12px; z-index: 100; display: flex; flex-direction: column; gap: 6px; padding: 12px; background: rgba(20,20,20,.92); border: 1px solid #444; border-radius: 10px; font: 13px system-ui; color: #ccc; }
+.font-picker button { font-size: 20px; padding: 6px 14px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; text-align: left; }
+.font-picker button.on { background: #e30613; border-color: #e30613; }
+.p-note { margin-left: auto; font-size: 20px; opacity: .8; }
+body { display: block; }
 
 /* ================= Themes ================= */
 
@@ -107,10 +114,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
 @keyframes synth { to { background-position: 0 80px; } }
 
 /* River: white and red, the sash, the fans' photos. */
-.theme-river { --accent: #e30613; --ring: 5px; --radius: 16px; --font: Oswald, sans-serif; --glass: rgba(0,0,0,.4); --glass-focus: rgba(255,255,255,.28); --panel: rgba(18,8,8,.97); }
+.theme-river { --accent: #e30613; --ring: 5px; --radius: 16px; --font: var(--river-font, "River Plate TV"), Oswald, sans-serif; --clock-font: var(--font); --glass: rgba(0,0,0,.4); --glass-focus: rgba(255,255,255,.28); --panel: rgba(18,8,8,.97); }
 .bg.river { background: radial-gradient(1200px at 0 0, rgba(255,255,255,.12), transparent 60%), linear-gradient(#161616, #050505); }
 .theme-river .clock.big .time { font-weight: 700; text-shadow: 0 4px 30px rgba(0,0,0,.6); }
-.theme-river .clock .phrase { font: 500 40px Oswald, sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+.theme-river .clock .phrase { font: 500 40px var(--font); text-transform: uppercase; letter-spacing: .04em; }
 
 /* Argentina: celeste y blanco, the sun, mate. */
 .theme-argentina { --accent: #f6b40e; --ring: 5px; --radius: 18px; --glass: rgba(255,255,255,.12); --glass-focus: rgba(255,255,255,.3); --panel: rgba(14,42,71,.97); }

@@ -15,6 +15,13 @@ type Native = {
 const native = (window as unknown as { Android?: Native }).Android;
 export const onTV = !!native;
 
+// The preview uses a copy of a real TV's apps when there is one (public/mock, made from the TV and
+// never committed), else these few.
+let mock: { apps: App[]; inputs: Input[]; config?: Record<string, string> } | null = null;
+export async function loadMock() {
+  try { const r = await fetch("./mock/apps.json"); if (r.ok) mock = await r.json(); } catch { /* no copy: the made-up apps */ }
+}
+
 const fake: App[] = [
   ["com.google.android.youtube.tv", "YouTube"], ["com.netflix.ninja", "Netflix"],
   ["com.amazon.amazonvideo.livingroom", "Prime Video"], ["com.wbd.stream", "Max"],
@@ -24,16 +31,17 @@ const fake: App[] = [
 const log = (...a: unknown[]) => console.log("[bridge]", ...a);
 
 export const bridge = {
-  apps: (): App[] => (native ? JSON.parse(native.apps()) : fake),
+  apps: (): App[] => (native ? JSON.parse(native.apps()) : mock?.apps ?? fake),
   config: (): Record<string, string> | null => {
-    const c = native?.config();
+    if (!native) { const c = mock?.config ?? null; if (mock) mock.config = undefined; return c; }
+    const c = native.config();
     return c ? JSON.parse(c) : null;
   },
   open: (pkg: string) => (native ? native.open(pkg) : log("open", pkg)),
   settings: (which: "tv" | "network" | "bluetooth" | "sound" | "picture") => (native ? native.settings(which) : log("settings", which)),
   uninstall: (pkg: string) => (native ? native.uninstall(pkg) : log("uninstall", pkg)),
   appInfo: (pkg: string) => (native ? native.appInfo(pkg) : log("appInfo", pkg)),
-  inputs: (): Input[] => (native ? JSON.parse(native.inputs()) : [{ id: "hdmi1", label: "HDMI 1" }]),
+  inputs: (): Input[] => (native ? JSON.parse(native.inputs()) : mock?.inputs ?? [{ id: "hdmi1", label: "HDMI 1" }]),
   openInput: (id: string) => (native ? native.openInput(id) : log("input", id)),
   network: (): Net => (native ? JSON.parse(native.network()) : { type: "wifi", bars: 3 }),
   photos: (folder: string): string[] => (native ? JSON.parse(native.photos(folder)) : []),
@@ -43,7 +51,8 @@ export const bridge = {
 };
 
 // Icons and photos are served by the app at https://tvhome.local/.
-export const iconUrl = (pkg: string, banner: boolean) => (native ? `/icon/${pkg}${banner ? "?banner=1" : ""}` : "");
+export const iconUrl = (pkg: string, banner: boolean) =>
+  native ? `/icon/${pkg}${banner ? "?banner=1" : ""}` : mock ? `./mock/icons/${pkg}${banner ? ".banner" : ""}.png` : "";
 export const photoUrl = (path: string) => `/photo/${path}`;
 
 // Events from the native side: apps changed, network changed, back/menu keys, resume/pause, settings from adb.
