@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { App as AppInfo, bridge, iconUrl, Input, Net, onEvent, onTV } from "./bridge";
+import { App as AppInfo, bridge, iconUrl, Input, Net, onEvent } from "./bridge";
 import { Config, DEFAULT_APPS, load, merge, save } from "./config";
 import { t } from "./i18n";
 import { Bluetooth, Gear, Hdmi, Picture, Play, Plus, Sound, Wifi } from "./icons";
@@ -100,21 +100,7 @@ function Panel({ menu }: { menu: Extract<Menu, { kind: "panel" }> }) {
   );
 }
 
-// Browser preview only: try fonts for River's lettering without rebuilding.
-const RIVER_FONTS = ["Oswald", "River Plate TV", "Barlow Condensed", "Saira Condensed", "Bebas Neue", "Anton", "Archivo Black"];
-function FontPicker({ font, set }: { font: string; set: (f: string) => void }) {
-  return (
-    <div className="font-picker">
-      <b>Tipografía</b>
-      {RIVER_FONTS.map((f) => (
-        <button key={f} className={f === font ? "on" : ""} style={{ fontFamily: f }} onClick={() => set(f)}>{f}</button>
-      ))}
-    </div>
-  );
-}
-
 export default function Home() {
-  const [riverFont, setRiverFont] = useState(() => localStorage.getItem("riverFont") || "Oswald");
   const [config, setConfig] = useState<Config>(() => merge(load(), bridge.config()));
   const [apps, setApps] = useState<AppInfo[]>(() => bridge.apps());
   const [inputs, setInputs] = useState<Input[]>(() => bridge.inputs());
@@ -284,8 +270,7 @@ export default function Home() {
 
   return (
     <HomeContext.Provider value={home}>
-      {!onTV && theme.id === "river" && <FontPicker font={riverFont} set={(f) => { setRiverFont(f); localStorage.setItem("riverFont", f); }} />}
-      <div className={`stage theme-${theme.id}`} style={{ transform: `scale(${scale})`, ["--per-row" as string]: perRow, ["--river-font" as string]: `"${riverFont}"` }}>
+      <div className={`stage theme-${theme.id}`} style={{ transform: `scale(${scale})`, ["--per-row" as string]: perRow }}>
         <div className="backdrop" key={theme.id + (theme.id === "clasico" ? wallpaper : "")}>{theme.background(wallpaper)}</div>
         <div className="page">
           <div className="header" key={theme.id}>{theme.header}</div>
