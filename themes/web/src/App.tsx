@@ -101,7 +101,7 @@ function Panel({ menu }: { menu: Extract<Menu, { kind: "panel" }> }) {
 }
 
 // Browser preview only: try fonts for River's lettering without rebuilding.
-const RIVER_FONTS = ["River Plate TV", "Oswald", "Barlow Condensed", "Saira Condensed", "Bebas Neue", "Anton", "Archivo Black"];
+const RIVER_FONTS = ["Oswald", "River Plate TV", "Barlow Condensed", "Saira Condensed", "Bebas Neue", "Anton", "Archivo Black"];
 function FontPicker({ font, set }: { font: string; set: (f: string) => void }) {
   return (
     <div className="font-picker">
@@ -114,7 +114,7 @@ function FontPicker({ font, set }: { font: string; set: (f: string) => void }) {
 }
 
 export default function Home() {
-  const [riverFont, setRiverFont] = useState(() => localStorage.getItem("riverFont") || "River Plate TV");
+  const [riverFont, setRiverFont] = useState(() => localStorage.getItem("riverFont") || "Oswald");
   const [config, setConfig] = useState<Config>(() => merge(load(), bridge.config()));
   const [apps, setApps] = useState<AppInfo[]>(() => bridge.apps());
   const [inputs, setInputs] = useState<Input[]>(() => bridge.inputs());
