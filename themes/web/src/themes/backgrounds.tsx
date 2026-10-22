@@ -33,10 +33,16 @@ export const Wallpaper = ({ index }: { index: number }) => (
   <div className="bg" style={{ background: gradient((WALLPAPERS[index] ?? WALLPAPERS[0])[1]) }} />
 );
 
-// One photo (Foto) or a folder going by every 12 seconds, crossfading (River). Darker at the bottom,
-// so the apps stay readable. Nothing shows when there are no photos.
-export function Photos({ folder, every = 12000, fallback }: { folder: string; every?: number; fallback?: string }) {
-  const [list] = useState(() => (folder ? bridge.photos(folder).map((n) => `${folder}/${n}`) : bridge.photos("").filter((n) => /^fondo\./i.test(n))));
+// One photo (Foto), or folders going by every 12 seconds, crossfading (River: the club, then the
+// fans, taking turns). Darker at the bottom, so the apps stay readable. Nothing shows without photos.
+export function Photos({ folders, every = 12000, fallback }: { folders: string[]; every?: number; fallback?: string }) {
+  const [list] = useState(() => {
+    if (!folders.length) return bridge.photos("").filter((n) => /^fondo\./i.test(n));
+    const each = folders.map((f) => bridge.photos(f).map((n) => `${f}/${n}`));
+    const out: string[] = [];
+    for (let i = 0; i < Math.max(0, ...each.map((l) => l.length)); i++) for (const l of each) if (i < l.length) out.push(l[i]);
+    return out;
+  });
   const [i, setI] = useState(0);
   useEffect(() => {
     if (list.length < 2) return;

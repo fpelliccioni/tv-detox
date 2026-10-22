@@ -27,11 +27,11 @@ export const THEMES: Theme[] = [
   { id: "cine", name: "Cine", background: () => <div className="bg cine" />, header: <SmallClock />, perRow: 5, gridTop: 200, swatch: "linear-gradient(135deg,#000 40%,#e50914)" },
   { id: "minimal", name: "Minimal", background: () => <div className="bg minimal" />, header: <CenterClock />, swatch: "#2a2b2e" },
   { id: "estadio", name: "Estadio", background: () => <Pitch />, header: <Scoreboard />, swatch: "linear-gradient(135deg,#1f6b3b,#082414)" },
-  { id: "foto", name: "Foto", background: () => <Photos folder="" fallback="linear-gradient(#14243a,#050a12)" />, header: <BigClock />, swatch: "linear-gradient(135deg,#4a6cff,#26b4c8)" },
+  { id: "foto", name: "Foto", background: () => <Photos folders={[]} fallback="linear-gradient(#14243a,#050a12)" />, header: <BigClock />, swatch: "linear-gradient(135deg,#4a6cff,#26b4c8)" },
   { id: "retro", name: "Retro", background: () => <Synthwave />, header: <BigClock />, swatch: "linear-gradient(135deg,#ff2e97,#ffe14d)" },
   {
     id: "river", name: "River", ready: true,
-    background: () => <><div className="bg river" /><Photos folder="river" /><Sash /><RiverBadges /></>,
+    background: () => <><div className="bg river" /><Photos folders={["river", "hinchada"]} /><Sash /><RiverBadges /></>,
     header: <BigClock phrases={RIVER} />, swatch: "linear-gradient(135deg,#fff 35%,#e30613 35%,#e30613 65%,#fff 65%)",
   },
   { id: "argentina", name: "Argentina", background: () => <Argentina />, header: <BigClock phrases={ARG} />, swatch: "linear-gradient(#74acdf 33%,#fff 33%,#fff 66%,#74acdf 66%)" },
