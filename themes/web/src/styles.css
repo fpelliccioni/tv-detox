@@ -1,0 +1,156 @@
+/* The page is laid out at 1920x1080 and scaled to the screen (App.tsx sets the scale). A theme
+   is a class on .stage that sets these variables and adds its own touches below. */
+
+:root { color-scheme: dark; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+* { box-sizing: border-box; }
+
+.stage {
+  --text: #fff; --text-dim: rgba(255,255,255,.66); --accent: transparent; --ring: 0px;
+  --glass: rgba(255,255,255,.075); --glass-focus: rgba(255,255,255,.22); --glass-line: rgba(255,255,255,.09);
+  --panel: rgba(22,17,19,.97); --radius: 22px; --zoom: 1.1; --font: system-ui, Roboto, sans-serif;
+  --clock-font: var(--font); --clock-color: #fff; --clock-size: 176px; --label-font: var(--font);
+  position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden;
+  color: var(--text); font-family: var(--font);
+}
+.backdrop, .bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.page { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 0 96px 96px; scrollbar-width: none; }
+.page::-webkit-scrollbar { display: none; }
+.header { position: absolute; left: 96px; top: 92px; right: 96px; pointer-events: none; }
+.header .term, .header input { pointer-events: auto; }
+
+/* ---- Clocks ---- */
+.clock .date { font-size: 30px; color: var(--text-dim); }
+.clock.big .time { font: 600 var(--clock-size)/1 var(--clock-font); color: var(--clock-color); letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin-top: -4px; }
+.clock .phrase { font-size: 36px; margin-top: 18px; color: rgba(255,255,255,.9); text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+.clock.small { display: flex; align-items: baseline; gap: 28px; margin-top: -26px; }
+.clock.small .time { font: 600 72px/1 var(--clock-font); }
+.clock.center { position: absolute; left: 0; right: 0; top: 40px; text-align: center; }
+.clock.center .time { font: 200 230px/1 var(--clock-font); letter-spacing: -.02em; }
+
+/* ---- Tiles ---- */
+.grid { display: grid; column-gap: 36px; position: relative; }
+.grid.bottom { margin-top: 78px; } /* room for the name under a focused app */
+.cell { position: relative; }
+.tile {
+  aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; outline: none; position: relative;
+  transition: transform .14s ease-out, box-shadow .14s ease-out; background: #1e1a1c;
+}
+.tile.banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile.glass { background: var(--glass); border: 2px solid var(--glass-line); }
+.glass-in { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; font: 24px var(--label-font); color: var(--text); }
+.glass-in svg { width: 44px; height: 44px; }
+.glass-in .app-icon { width: 64px; height: 64px; }
+.glass-in span { max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile:focus { transform: scale(var(--zoom)); box-shadow: 0 18px 40px rgba(0,0,0,.45), 0 0 0 var(--ring) var(--accent); z-index: 2; }
+.tile.glass:focus { background: var(--glass-focus); }
+.tile.moving { box-shadow: 0 0 0 5px #fff !important; }
+.caption { position: absolute; left: 0; right: 0; top: calc(100% + 22px); text-align: center; font: 24px var(--label-font); visibility: hidden; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell:focus-within .caption { visibility: visible; }
+.move-hint { position: absolute; left: 96px; font-size: 24px; color: var(--text-dim); }
+
+.top-icons { position: absolute; right: 84px; top: 76px; display: flex; gap: 12px; }
+.icon-btn { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; outline: none; transition: transform .14s, background .14s; }
+.icon-btn svg { width: 40px; height: 40px; }
+.icon-btn:focus { background: var(--glass-focus); transform: scale(1.1); }
+
+/* ---- Menus ---- */
+.dropdown { position: absolute; z-index: 10; padding: 10px; border-radius: var(--radius); background: var(--panel); border: 2px solid var(--glass-line); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.dd-item { height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 0 22px; border-radius: calc(var(--radius) - 8px); font: 26px var(--label-font); outline: none; white-space: nowrap; color: rgba(255,255,255,.85); }
+.dd-item:focus { background: var(--glass-focus); color: #fff; }
+.check { font-size: 20px; opacity: .7; }
+.panel-wrap { position: absolute; inset: 0; z-index: 10; background: rgba(0,0,0,.5); }
+.panel-wrap.previewing { background: transparent; }
+.side-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 640px; background: var(--panel); padding: 92px 48px 48px; display: flex; flex-direction: column; }
+.side-panel h2 { margin: 0 24px 36px; font: 600 40px var(--label-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list { overflow-y: auto; scrollbar-width: none; flex: 1; }
+.list::-webkit-scrollbar { display: none; }
+.p-item { min-height: 88px; display: flex; align-items: center; gap: 24px; padding: 0 24px; border-radius: var(--radius); font: 30px var(--label-font); outline: none; color: rgba(255,255,255,.9); }
+.p-item:focus { background: var(--glass-focus); }
+.swatch { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255,255,255,.2); flex: none; }
+.p-icon { width: 48px; height: 48px; flex: none; }
+
+/* ================= Themes ================= */
+
+/* Cine: black, Netflix red outline, small clock, five big tiles a row. */
+.theme-cine { --accent: #e50914; --ring: 5px; --radius: 10px; --zoom: 1.12; --font: Oswald, sans-serif; --panel: rgba(12,12,12,.97); }
+.bg.cine { background: radial-gradient(1200px at 100% 120%, rgba(176,6,15,.35), transparent 60%), #030303; }
+.theme-cine .header { top: 96px; }
+
+/* Minimal: flat graphite, a thin centred clock. */
+.theme-minimal { --radius: 6px; --zoom: 1.06; --font: "Helvetica Neue", Roboto, sans-serif; --panel: rgba(32,33,35,.98); --glass: rgba(255,255,255,.05); }
+.bg.minimal { background: #1c1d1f; }
+
+/* Estadio: a pitch, the clock on a scoreboard. */
+.theme-estadio { --accent: #fff; --ring: 4px; --radius: 14px; --font: Oswald, sans-serif; --panel: rgba(8,30,16,.97); }
+.clock.board .panel { display: inline-flex; align-items: center; gap: 30px; margin-top: 14px; padding: 16px 30px; background: rgba(5,10,7,.92); border: 3px solid rgba(255,255,255,.25); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.clock.board .time { font: 400 120px/1 "VT323", monospace; color: #ffc400; text-shadow: 0 0 18px rgba(255,196,0,.6); min-width: 5ch; text-align: center; white-space: pre; }
+.clock.board .team { font: 700 28px Oswald, sans-serif; color: rgba(255,255,255,.75); letter-spacing: .1em; }
+
+/* Foto: your photo. */
+.theme-foto { --accent: #fff; --ring: 4px; --glass: rgba(0,0,0,.3); --glass-focus: rgba(255,255,255,.3); }
+.photos img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.2s; }
+.photos img.on { opacity: 1; }
+.photos .shade { position: absolute; inset: 0; background: linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.25) 35%, rgba(0,0,0,.85)); }
+
+/* Retro: synthwave. */
+.theme-retro { --accent: #00e5ff; --ring: 4px; --radius: 4px; --zoom: 1.08; --font: "VT323", monospace; --clock-font: "VT323", monospace; --clock-color: #ff6ad5; --clock-size: 200px; --glass: rgba(0,0,0,.35); --glass-line: rgba(0,229,255,.35); --glass-focus: rgba(0,229,255,.2); --panel: rgba(20,6,31,.97); }
+.theme-retro .clock.big .time { font-weight: 400; text-shadow: 0 0 24px #ff2e97, 0 0 60px #ff2e97; }
+.theme-retro .caption { visibility: visible; opacity: .6; font-size: 30px; } .theme-retro .cell:focus-within .caption { opacity: 1; }
+.theme-retro .glass-in { font-size: 30px; }
+.theme-retro .tile:focus { box-shadow: 0 0 0 4px #00e5ff, 0 0 30px #00e5ff; }
+.synth svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.synth-floor { position: absolute; left: 0; right: 0; top: 600px; bottom: 0; perspective: 300px; overflow: hidden; background: #0a0314; }
+.synth-grid { position: absolute; left: -50%; right: -50%; top: 0; height: 200%; transform: rotateX(70deg); transform-origin: top;
+  background-image: linear-gradient(rgba(255,46,151,.8) 2px, transparent 2px), linear-gradient(90deg, rgba(255,46,151,.8) 2px, transparent 2px);
+  background-size: 80px 80px; animation: synth 1.2s linear infinite; }
+@keyframes synth { to { background-position: 0 80px; } }
+
+/* River: white and red, the sash, the fans' photos. */
+.theme-river { --accent: #e30613; --ring: 5px; --radius: 16px; --font: Oswald, sans-serif; --glass: rgba(0,0,0,.4); --glass-focus: rgba(255,255,255,.28); --panel: rgba(18,8,8,.97); }
+.bg.river { background: radial-gradient(1200px at 0 0, rgba(255,255,255,.12), transparent 60%), linear-gradient(#161616, #050505); }
+.theme-river .clock.big .time { font-weight: 700; text-shadow: 0 4px 30px rgba(0,0,0,.6); }
+.theme-river .clock .phrase { font: 500 40px Oswald, sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+
+/* Argentina: celeste y blanco, the sun, mate. */
+.theme-argentina { --accent: #f6b40e; --ring: 5px; --radius: 18px; --glass: rgba(255,255,255,.12); --glass-focus: rgba(255,255,255,.3); --panel: rgba(14,42,71,.97); }
+.theme-argentina .clock .phrase { font-style: italic; }
+
+/* Matrix: falling code. */
+.theme-matrix { --text: #b8ffc8; --text-dim: rgba(184,255,200,.7); --accent: #00ff41; --ring: 3px; --radius: 4px; --zoom: 1.08; --font: "VT323", monospace; --clock-font: "VT323", monospace; --clock-color: #00ff41; --clock-size: 200px; --glass: rgba(0,0,0,.6); --glass-line: rgba(0,255,65,.4); --glass-focus: rgba(0,255,65,.18); --panel: rgba(0,8,0,.96); }
+.bg.matrix { background: #000; opacity: .55; }
+.theme-matrix .clock.big .time { font-weight: 400; text-shadow: 0 0 20px #00ff41; }
+.theme-matrix .clock .phrase, .theme-matrix .caption, .theme-matrix .glass-in { font-size: 32px; color: #00ff41; }
+.theme-matrix .caption { visibility: visible; opacity: .6; } .theme-matrix .cell:focus-within .caption { opacity: 1; }
+.theme-matrix .tile:focus { box-shadow: 0 0 0 3px #00ff41, 0 0 30px rgba(0,255,65,.6); }
+
+/* C64: light blue on blue, inside the border, capitals and a blinking cursor. */
+.theme-c64 { --text: #8a7ee0; --text-dim: #8a7ee0; --accent: #a99cff; --ring: 6px; --radius: 0; --zoom: 1.05; --font: "Press Start 2P", monospace; --glass: #40349a; --glass-line: #6c5eb5; --glass-focus: #6c5eb5; --panel: #2a1f66; }
+.bg.c64 { background: #352879; box-shadow: inset 0 0 0 60px #6c5eb5; }
+.theme-c64 .page { padding: 0 110px; }
+.theme-c64 .header { left: 110px; top: 96px; }
+.c64screen { font: 26px/1.6 "Press Start 2P", monospace; color: #8a7ee0; text-transform: uppercase; }
+.c64screen p { margin: 0; white-space: pre; } .c64screen .center { text-align: center; width: 1700px; }
+.c64time { font-size: 60px; margin-top: 12px !important; display: flex; align-items: center; gap: 16px; }
+.cursor { display: inline-block; width: 46px; height: 60px; background: #8a7ee0; animation: blink 1.06s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.theme-c64 .caption, .theme-c64 .glass-in { font-size: 16px; text-transform: uppercase; }
+.theme-c64 .caption { visibility: visible; opacity: .7; } .theme-c64 .cell:focus-within .caption { opacity: 1; }
+.theme-c64 .dd-item, .theme-c64 .p-item, .theme-c64 .side-panel h2 { font-size: 20px; text-transform: uppercase; }
+
+/* Terminal: a console to type commands into. */
+.theme-terminal { --text: #33ff66; --text-dim: rgba(51,255,102,.7); --accent: #33ff66; --ring: 3px; --radius: 3px; --zoom: 1.05; --font: "VT323", monospace; --glass: rgba(51,255,102,.06); --glass-line: rgba(51,255,102,.35); --glass-focus: rgba(51,255,102,.2); --panel: rgba(2,10,4,.97); }
+.bg.terminal { background: repeating-linear-gradient(transparent 0 3px, rgba(0,0,0,.25) 3px 4px), radial-gradient(1400px at 50% 40%, #07160a, #000); }
+.theme-terminal .header { top: 56px; right: 190px; }
+.theme-terminal .caption, .theme-terminal .glass-in { font-size: 30px; }
+.theme-terminal .caption { visibility: visible; opacity: .6; } .theme-terminal .cell:focus-within .caption { opacity: 1; }
+.term { height: 480px; display: flex; flex-direction: column; background: rgba(0,0,0,.82); border: 2px solid rgba(51,255,102,.4); border-radius: 8px; padding: 10px 22px 18px; font: 30px/1.15 "VT323", monospace; color: #33ff66; text-shadow: 0 0 8px rgba(51,255,102,.5); }
+.term-title { display: flex; align-items: center; gap: 10px; color: rgba(51,255,102,.6); font-size: 24px; padding-bottom: 8px; }
+.term-title i { width: 14px; height: 14px; border-radius: 50%; background: rgba(51,255,102,.45); }
+.term-title span { margin-left: 14px; }
+.term-out { flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; white-space: pre; }
+.term-in { display: flex; align-items: center; }
+.term-in span { color: #fff; white-space: pre; }
+.term-in input { flex: 1; background: none; border: 0; outline: none; color: #33ff66; font: inherit; caret-color: #33ff66; padding: 2px 6px; border-radius: 4px; }
+.term-in input:focus { background: rgba(51,255,102,.12); }
+.term-in input::placeholder { color: rgba(51,255,102,.35); }
