@@ -113,6 +113,33 @@ export default function Home() {
   const [scale, setScale] = useState(fit);
   const lastFocus = useRef<string | null>(null);
 
+  // Left alone, the screen clears to just the photos (themes with a slideshow). The first key only
+  // brings everything back; it doesn't move or open anything.
+  const IDLE_MS = 20000;
+  const [idle, setIdle] = useState(false);
+  const idleRef = useRef(false);
+  idleRef.current = idle;
+  useEffect(() => {
+    let timer = 0;
+    const arm = () => { clearTimeout(timer); timer = window.setTimeout(() => setIdle(true), IDLE_MS); };
+    const wake = (e: Event) => {
+      if (idleRef.current) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        setIdle(false);
+      }
+      arm();
+    };
+    const keys = ["keydown", "keyup"];
+    keys.forEach((k) => window.addEventListener(k, wake, true)); // capture: before nav.ts sees it
+    window.addEventListener("mousemove", arm);
+    const offEvent = onEvent((name) => {
+      if (name === "back" || name === "menu" || name === "resume") { setIdle(false); arm(); }
+    });
+    arm();
+    return () => { clearTimeout(timer); keys.forEach((k) => window.removeEventListener(k, wake, true)); window.removeEventListener("mousemove", arm); offEvent(); };
+  }, []);
+
   useEffect(() => save(config), [config]);
   useEffect(() => {
     const r = () => setScale(fit());
@@ -270,7 +297,7 @@ export default function Home() {
 
   return (
     <HomeContext.Provider value={home}>
-      <div className={`stage theme-${theme.id}`} style={{ transform: `scale(${scale})`, ["--per-row" as string]: perRow }}>
+      <div className={`stage theme-${theme.id} ${idle && !menu && !moving ? "idle" : ""}`} style={{ transform: `scale(${scale})`, ["--per-row" as string]: perRow }}>
         <div className="backdrop" key={theme.id + (theme.id === "clasico" ? wallpaper : "")}>{theme.background(wallpaper)}</div>
         <div className="page">
           <div className="header" key={theme.id}>{theme.header}</div>
