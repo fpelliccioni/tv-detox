@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { bridge, photoUrl } from "../bridge";
+import leon from "../assets/river/leon-clasico.svg";
+import catorce from "../assets/river/14.png";
 
 // Backgrounds are drawn at 1920x1080 and scaled with the page.
 
@@ -68,6 +70,14 @@ export const Sash = () => (
     <polygon points={sash} fill="url(#sashShade)" opacity=".93" />
     <polygon points={sash} fill="none" stroke="#fff" strokeWidth="10" opacity=".85" />
   </svg>
+);
+
+// River's badges: the 14 on the sash like a shirt number, and the classic lion by the clock.
+export const RiverBadges = () => (
+  <div className="bg river-badges">
+    <img className="river-14" src={catorce} alt="" />
+    <img className="river-leon" src={leon} alt="" />
+  </div>
 );
 
 // A mowed pitch at night: bands, the halfway line, the centre circle.

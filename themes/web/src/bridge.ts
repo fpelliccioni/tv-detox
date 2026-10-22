@@ -18,8 +18,10 @@ export const onTV = !!native;
 // The preview uses a copy of a real TV's apps when there is one (public/mock, made from the TV and
 // never committed), else these few.
 let mock: { apps: App[]; inputs: Input[]; config?: Record<string, string> } | null = null;
+let mockPhotos: Record<string, string[]> = {};
 export async function loadMock() {
   try { const r = await fetch("./mock/apps.json"); if (r.ok) mock = await r.json(); } catch { /* no copy: the made-up apps */ }
+  try { const r = await fetch("./mock/photos.json"); if (r.ok) mockPhotos = await r.json(); } catch { /* no photos */ }
 }
 
 const fake: App[] = [
@@ -44,7 +46,7 @@ export const bridge = {
   inputs: (): Input[] => (native ? JSON.parse(native.inputs()) : mock?.inputs ?? [{ id: "hdmi1", label: "HDMI 1" }]),
   openInput: (id: string) => (native ? native.openInput(id) : log("input", id)),
   network: (): Net => (native ? JSON.parse(native.network()) : { type: "wifi", bars: 3 }),
-  photos: (folder: string): string[] => (native ? JSON.parse(native.photos(folder)) : []),
+  photos: (folder: string): string[] => (native ? JSON.parse(native.photos(folder)) : mockPhotos[folder] ?? []),
   device: (): Device =>
     native ? JSON.parse(native.device())
       : { model: "Browser", device: "dev", android: "-", sdk: 0, cpu: navigator.platform, ramUsed: 0, ramTotal: 0, uptime: performance.now() },
@@ -53,7 +55,7 @@ export const bridge = {
 // Icons and photos are served by the app at https://tvhome.local/.
 export const iconUrl = (pkg: string, banner: boolean) =>
   native ? `/icon/${pkg}${banner ? "?banner=1" : ""}` : mock ? `./mock/icons/${pkg}${banner ? ".banner" : ""}.png` : "";
-export const photoUrl = (path: string) => `/photo/${path}`;
+export const photoUrl = (path: string) => (native ? `/photo/${path}` : `./mock/photo/${path}`);
 
 // Events from the native side: apps changed, network changed, back/menu keys, resume/pause, settings from adb.
 type Handler = (name: string) => void;

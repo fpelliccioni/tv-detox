@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Argentina, MatrixRain, Photos, Pitch, Sash, Synthwave, Wallpaper } from "./backgrounds";
+import { Argentina, MatrixRain, Photos, Pitch, RiverBadges, Sash, Synthwave, Wallpaper } from "./backgrounds";
 import { BigClock, C64Screen, CenterClock, Scoreboard, SmallClock, Terminal } from "./headers";
 
 // A theme is the whole look: a class on the page (colours, shapes and fonts live in styles.css,
@@ -31,7 +31,7 @@ export const THEMES: Theme[] = [
   { id: "retro", name: "Retro", background: () => <Synthwave />, header: <BigClock />, swatch: "linear-gradient(135deg,#ff2e97,#ffe14d)" },
   {
     id: "river", name: "River", ready: true,
-    background: () => <><div className="bg river" /><Photos folder="river" /><Sash /></>,
+    background: () => <><div className="bg river" /><Photos folder="river" /><Sash /><RiverBadges /></>,
     header: <BigClock phrases={RIVER} />, swatch: "linear-gradient(135deg,#fff 35%,#e30613 35%,#e30613 65%,#fff 65%)",
   },
   { id: "argentina", name: "Argentina", background: () => <Argentina />, header: <BigClock phrases={ARG} />, swatch: "linear-gradient(#74acdf 33%,#fff 33%,#fff 66%,#74acdf 66%)" },
