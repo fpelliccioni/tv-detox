@@ -1,7 +1,7 @@
 import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readdirSync, realpathSync, renameSync, statSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 
 // Browser preview: lists the photos in public/mock/photo/<folder> (e.g. a link to your own photo
 // folder), the way the TV app lists /sdcard/TVHome/<folder>.
@@ -18,6 +18,20 @@ const mockPhotos = (): Plugin => ({
         if (statSync(join(base, d)).isDirectory()) out[d] = list(join(base, d));
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify(out));
+    });
+    // Discards a photo (POST /mock/discard?path=river/x.jpg): moves it to descartadas/ next to it.
+    server.middlewares.use("/mock/discard", (req, res) => {
+      const rel = new URL(req.url ?? "", "http://x").searchParams.get("path") ?? "";
+      const base = join(server.config.publicDir, "mock/photo");
+      if (req.method !== "POST" || !/^([\w.-]+\/)?[\w.-]+\.(jpe?g|png|webp)$/i.test(rel) || rel.includes("..")) {
+        res.statusCode = 400;
+        return res.end("bad request");
+      }
+      const file = realpathSync(join(base, rel));
+      const dest = join(dirname(file), "descartadas");
+      if (!existsSync(dest)) mkdirSync(dest);
+      renameSync(file, join(dest, basename(file)));
+      res.end("ok");
     });
   },
 });

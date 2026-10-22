@@ -36,7 +36,7 @@ export const Wallpaper = ({ index }: { index: number }) => (
 // One photo (Foto), or folders going by every 12 seconds, crossfading (River: the club, then the
 // fans, taking turns). Darker at the bottom, so the apps stay readable. Nothing shows without photos.
 export function Photos({ folders, every = 12000, fallback }: { folders: string[]; every?: number; fallback?: string }) {
-  const [list] = useState(() => {
+  const [list, setList] = useState(() => {
     if (!folders.length) return bridge.photos("").filter((n) => /^fondo\./i.test(n));
     const each = folders.map((f) => bridge.photos(f).map((n) => `${f}/${n}`));
     const out: string[] = [];
@@ -53,12 +53,22 @@ export function Photos({ folders, every = 12000, fallback }: { folders: string[]
   useEffect(() => {
     if (onTV) return;
     const key = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
       if (e.key === "]") setI((n) => (n + 1) % list.length);
       if (e.key === "[") setI((n) => (n - 1 + list.length) % list.length);
+      // d: discard this photo (moved to descartadas/ on the computer), and show the next one.
+      if (e.key === "d" && list.length) {
+        const gone = list[i];
+        fetch(`./mock/discard?path=${encodeURIComponent(gone)}`, { method: "POST" }).then((r) => {
+          if (!r.ok) return;
+          setList((l) => l.filter((p) => p !== gone));
+          setI((n) => (list.length > 1 ? n % (list.length - 1) : 0));
+        });
+      }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [list]);
+  }, [list, i]);
   if (!list.length) return fallback ? <div className="bg" style={{ background: fallback }} /> : null;
   return (
     <div className="bg photos">
