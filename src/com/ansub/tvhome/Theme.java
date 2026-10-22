@@ -117,9 +117,15 @@ final class Theme {
     // The theme a fresh install starts with.
     static final String DEFAULT = "Clásico";
 
+    // The theme with this name; nothing saved yet, or a name that's gone, gets the default.
     static int indexOf(String name) {
+        int i = find(name);
+        return i >= 0 ? i : Math.max(0, find(DEFAULT));
+    }
+
+    private static int find(String name) {
         for (int i = 0; i < ALL.length; i++) if (ALL[i].name.equals(name)) return i;
-        return name == null || name.equals(DEFAULT) ? 0 : indexOf(DEFAULT);
+        return -1;
     }
 
     String phrase() {
