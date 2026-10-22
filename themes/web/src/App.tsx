@@ -126,6 +126,8 @@ export default function Home() {
     const DEBUG = ["[", "]", "d", "e"];
     const wake = (e: Event) => {
       if (!onTV && e instanceof KeyboardEvent && DEBUG.includes(e.key) && !(e.target instanceof HTMLInputElement)) return;
+      // Escape is Back in the browser: it's what turns the photos-only view on, so it never wakes it.
+      if (e instanceof KeyboardEvent && e.key === "Escape") return;
       if (idleRef.current) {
         e.preventDefault();
         e.stopImmediatePropagation();
