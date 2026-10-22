@@ -96,8 +96,8 @@ body { display: block; }
 .photos img.on { opacity: 1; }
 .photo-name { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 5; padding: 6px 16px; border-radius: 8px; background: rgba(0,0,0,.75); color: #ffe14d; font: 600 26px/1.2 ui-monospace, monospace; white-space: nowrap; }
 /* Idle: everything but the photos fades away (App.tsx). */
-.page, .river-badges, .photos .shade { transition: opacity 1.2s ease; }
-.stage.idle .page, .stage.idle .river-badges { opacity: 0; }
+.page, .photos .shade { transition: opacity 1.2s ease; }
+.stage.idle .page { opacity: 0; }
 .stage.idle .photos .shade { opacity: .35; }
 .photos .shade { position: absolute; inset: 0; background: linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.25) 35%, rgba(0,0,0,.85)); }
 
@@ -119,8 +119,8 @@ body { display: block; }
 .bg.river { background: radial-gradient(1200px at 0 0, rgba(255,255,255,.12), transparent 60%), linear-gradient(#161616, #050505); }
 .theme-river .clock.big .time { font-weight: 700; text-shadow: 0 4px 30px rgba(0,0,0,.6); }
 .river-badges img { position: absolute; }
-.river-14 { left: 1000px; top: 215px; width: 380px; opacity: .9; }
-.river-leon { left: 1440px; top: 130px; width: 380px; filter: drop-shadow(0 12px 30px rgba(0,0,0,.55)); }
+.river-leon { left: 1504px; top: 168px; width: 320px; filter: drop-shadow(0 12px 30px rgba(0,0,0,.55)); transition: all 1.2s ease; }
+.stage.idle .river-leon { left: 1730px; top: 890px; width: 150px; opacity: .85; }
 .theme-river .clock .phrase { font: 500 40px var(--font); text-transform: uppercase; letter-spacing: .04em; }
 
 /* Argentina: celeste y blanco, the sun, mate. */

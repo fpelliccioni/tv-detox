@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { bridge, onTV, photoUrl } from "../bridge";
 import leon from "../assets/river/leon-clasico.svg";
-import catorce from "../assets/river/14.png";
 
 // Backgrounds are drawn at 1920x1080 and scaled with the page.
 
@@ -103,10 +102,10 @@ export const Sash = () => (
   </svg>
 );
 
-// River's badges: the 14 on the sash like a shirt number, and the classic lion by the clock.
+// River's badge: the classic lion, top right across from the clock. Left alone, it stays on as a
+// small corner mark over the photos, like a TV channel's logo. (The 14 is in assets, unused for now.)
 export const RiverBadges = () => (
   <div className="bg river-badges">
-    <img className="river-14" src={catorce} alt="" />
     <img className="river-leon" src={leon} alt="" />
   </div>
 );

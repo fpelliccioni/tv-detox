@@ -32,7 +32,7 @@ export const THEMES: Theme[] = [
   {
     id: "river", name: "River", ready: true,
     // Hidden for now: the sash (<Sash />) and the chants under the clock (phrases={RIVER}).
-    background: () => <><div className="bg river" /><Photos folders={["river", "hinchada"]} /><RiverBadges /></>,
+    background: () => <><div className="bg river" /><Photos folders={["river", "hinchada", "lbdt"]} /><RiverBadges /></>,
     header: <BigClock />, swatch: "linear-gradient(135deg,#fff 35%,#e30613 35%,#e30613 65%,#fff 65%)",
   },
   { id: "argentina", name: "Argentina", background: () => <Argentina />, header: <BigClock phrases={ARG} />, swatch: "linear-gradient(#74acdf 33%,#fff 33%,#fff 66%,#74acdf 66%)" },
