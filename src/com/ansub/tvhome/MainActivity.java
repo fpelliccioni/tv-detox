@@ -348,7 +348,7 @@ public class MainActivity extends Activity {
     private void showBackground() {
         Drawable base = background(theme.bg != null ? theme.bg : WALLPAPERS[wallpaper()]);
         android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-        Drawable over = Theme.overlay(theme, getExternalFilesDir(null), dm.widthPixels, dm.heightPixels);
+        Drawable over = Theme.overlay(theme, Theme.photoDirs(this), dm.widthPixels, dm.heightPixels);
         getWindow().setBackgroundDrawable(over == null ? base : new LayerDrawable(new Drawable[] {base, over}));
     }
 

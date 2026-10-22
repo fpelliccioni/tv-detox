@@ -25,6 +25,9 @@
         <!-- Google TV's HDMI input player, so HDMI tiles can see when the TV sends HDMI to it. -->
         <package android:name="com.google.android.tv.inputplayer" />
     </queries>
+    <!-- Read only, for the Foto and River themes: your photos in /sdcard/TVHome (copied there by fotos.sh). -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <!-- Lets "Uninstall" in the app menu open Android's uninstall prompt. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-feature android:name="android.software.leanback" android:required="false" />

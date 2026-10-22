@@ -40,11 +40,11 @@ Pick one on the TV with **Settings → Theme** (**Ajustes → Tema**). The scree
 | **Argentina** — celeste y blanco, Sol de Mayo, mate y asado<br><img src="docs/themes/argentina.jpg" width="100%"> | **Matrix** — falling green code (animated)<br><img src="docs/themes/matrix.jpg" width="100%"> |
 | **C64** — the Commodore 64 start-up screen, blinking cursor<br><img src="docs/themes/c64.jpg" width="100%"> | **Terminal** — type commands: `ls`, `open netflix`, `theme matrix`, `neofetch`, `help`<br><img src="docs/themes/terminal.jpg" width="100%"> |
 
-**Foto** and **River** show your own photos. Nothing is downloaded: copy them to the app's folder on the TV.
+**Foto** and **River** show your own photos. Nothing is downloaded: `fotos.sh` copies them to `/sdcard/TVHome` on the TV and allows the home screen to read them (read only).
 
 ```sh
-adb push foto.jpg  /sdcard/Android/data/com.ansub.tvhome/files/fondo.jpg   # Foto: one photo
-adb push mis-fotos/. /sdcard/Android/data/com.ansub.tvhome/files/river/    # River: a slideshow (jpg, png, webp)
+sh fotos.sh <TV_IP> foto.jpg      # Foto: one photo as the background
+sh fotos.sh <TV_IP> mis-fotos/    # River: a slideshow of a folder (jpg, png, webp)
 ```
 
 Animations (Matrix, the River slideshow) only run while the home screen is showing, so apps never pay for them.

@@ -21,10 +21,14 @@ final class Theme {
             CLOCK_TERMINAL = 5;
     static final int PLAIN = 0, PITCH = 1, SYNTHWAVE = 2, PHOTO = 3, RIVER = 4, ARGENTINA = 5, C64 = 6, SCANLINES = 7;
     static final int STILL = 0, MATRIX = 1, SLIDESHOW = 2;
-    // Photos live in the app's own folder: it can read it without any permission, and adb can write it.
-    //   adb push foto.jpg /sdcard/Android/data/com.ansub.tvhome/files/fondo.jpg       (Photo)
-    //   adb push fotos/   /sdcard/Android/data/com.ansub.tvhome/files/river/          (River, a slideshow)
+    // Your photos, copied to the TV by fotos.sh:  /sdcard/TVHome/fondo.jpg (Foto), /sdcard/TVHome/river/ (River).
+    // The app's own folder works too, on TVs where adb can write there.
     static final String PHOTO_FILE = "fondo.jpg";
+
+    static java.io.File[] photoDirs(android.content.Context c) {
+        return new java.io.File[] {new java.io.File(android.os.Environment.getExternalStorageDirectory(), "TVHome"),
+                c.getExternalFilesDir(null)};
+    }
 
     final String name;
     int[] bg;              // gradient like the wallpapers; null: the saved wallpaper (Classic)
@@ -110,9 +114,12 @@ final class Theme {
                 .text(0xFF33FF66, true, false).glass(0x1433FF66, 0x3333FF66, 0xF0020A04),
     };
 
+    // The theme a fresh install starts with.
+    static final String DEFAULT = "Clásico";
+
     static int indexOf(String name) {
         for (int i = 0; i < ALL.length; i++) if (ALL[i].name.equals(name)) return i;
-        return 0;
+        return name == null || name.equals(DEFAULT) ? 0 : indexOf(DEFAULT);
     }
 
     String phrase() {
@@ -120,11 +127,14 @@ final class Theme {
     }
 
     // Drawn over the gradient. Plain themes get nothing, so they cost the same as before.
-    static Drawable overlay(Theme t, java.io.File dir, int width, int height) {
+    static Drawable overlay(Theme t, java.io.File[] dirs, int width, int height) {
         if (t.pattern == PHOTO) {
-            java.io.File f = dir == null ? null : new java.io.File(dir, PHOTO_FILE);
-            Bitmap b = f != null && f.exists() ? decode(f.getPath(), width, height) : null;
-            return b == null ? null : new Photo(b, true);
+            for (java.io.File dir : dirs == null ? new java.io.File[0] : dirs) {
+                java.io.File f = dir == null ? null : new java.io.File(dir, PHOTO_FILE);
+                Bitmap b = f != null && f.exists() ? decode(f.getPath(), width, height) : null;
+                if (b != null) return new Photo(b, true);
+            }
+            return null;
         }
         return t.pattern == PLAIN ? null : new Pattern(t.pattern);
     }

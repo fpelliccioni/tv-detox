@@ -22,9 +22,11 @@ final class Motion {
     static View make(Context c, Theme t, int w, int h) {
         if (t.motion == Theme.MATRIX) return new Rain(c);
         if (t.motion == Theme.SLIDESHOW) {
-            File dir = c.getExternalFilesDir(t.folder);
-            Slideshow s = new Slideshow(c, dir, w, h);
-            return s.isEmpty() ? null : s;
+            for (File base : Theme.photoDirs(c)) {
+                if (base == null) continue;
+                Slideshow s = new Slideshow(c, new File(base, t.folder), w, h);
+                if (!s.isEmpty()) return s;
+            }
         }
         return null;
     }
